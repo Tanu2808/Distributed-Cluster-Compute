@@ -1,7 +1,8 @@
 import { useLocation } from 'react-router-dom';
 import { Clock } from 'lucide-react';
-import { mockClusterSummary } from '../../mock/cluster';
+import { useClusterSummary } from '../../hooks/useCluster';
 import { ClusterStatusBadge } from '../status/ClusterStatusBadge';
+import { WsStatusIndicator } from '../status/WsStatusIndicator';
 
 const pageTitles: Record<string, string> = {
   '/':              'Dashboard',
@@ -22,6 +23,7 @@ function LiveClock() {
 export function TopBar() {
   const { pathname } = useLocation();
   const title = pageTitles[pathname] ?? 'Cluster';
+  const { data: cluster } = useClusterSummary();
 
   return (
     <header className="h-14 bg-[#0c1526]/80 backdrop-blur border-b border-slate-800 flex items-center justify-between px-6 flex-shrink-0">
@@ -30,9 +32,10 @@ export function TopBar() {
         <h1 className="text-base font-semibold text-slate-100">{title}</h1>
       </div>
 
-      {/* Right: cluster status + time */}
+      {/* Right: WS indicator + cluster status + time */}
       <div className="flex items-center gap-4">
-        <ClusterStatusBadge status={mockClusterSummary.status} />
+        <WsStatusIndicator />
+        {cluster && <ClusterStatusBadge status={cluster.status} />}
         <div className="flex items-center gap-1.5 text-slate-500">
           <Clock size={12} />
           <LiveClock />
