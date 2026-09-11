@@ -260,17 +260,19 @@ Coordinator configuration includes:
 
 # Frontend UI
 
-> **Status: Phase 1 Complete** — Fully navigable UI using realistic mock data.
+> **Status: Phase 2 Complete** — Application logic implemented with React Query, Zustand, and WebSocket integration.
 
 The frontend is a React 18 + TypeScript + Vite application styled with Tailwind CSS v3.
 
 ## Current State
 
-The UI is **fully functional but uses mock data**.
+The frontend UI is fully wired up to a robust API and state management layer, ready to connect to the Spring Boot Coordinator.
 
-All data displayed — worker stats, CPU/memory/GPU metrics, cluster events, settings — comes from static files in `src/mock/`. No backend connection exists yet. This is intentional: Phase 1 is a dedicated UI branch focused purely on building the visual layer.
+- **Data Fetching:** Handled by `@tanstack/react-query` for automatic caching, deduplication, background refetching, and loading/error states.
+- **Real-time Updates:** A singleton `WebSocketService` maintains a connection to the backend with automatic exponential backoff.
+- **State Management:** A lightweight `zustand` store listens to WebSocket messages and seamlessly invalidates React Query caches, causing the UI to live-update without manual page refreshes.
 
-The application is **not a prototype with placeholder boxes**. Every page renders real-looking data with working charts, status indicators, sortable tables, a detail modal drawer, and interactive settings controls. The goal is that when you open the app, it looks and behaves exactly as the finished product will — just powered by mock data instead of a live backend.
+The application includes a **Mock Mode** (`VITE_USE_MOCK_API=true`). When enabled, custom React Query hooks immediately return static data from `src/mock/` instead of calling the backend, allowing independent frontend development without needing a running server.
 
 ## Pages
 
@@ -281,48 +283,29 @@ The application is **not a prototype with placeholder boxes**. Every page render
 | Cluster Observability | `/observability` | "Logical Cluster" hero, worker→cluster contribution diagram, per-resource sections with charts |
 | Cluster Settings | `/settings` | Tabbed settings: Coordinator, Worker Registration, Resource Config, Monitoring |
 
-## Mock Data Layer
+## Application Logic Architecture
 
 ```text
-src/mock/
-├── workers.ts    ← 3 workers: PC-01 (Online), PC-02 (Busy), PC-03 (Offline)
-├── cluster.ts    ← Aggregated cluster summary + time-series chart data
-├── events.ts     ← 10 realistic cluster lifecycle events
-└── settings.ts   ← Default coordinator/worker configuration values
+src/
+├── api/             ← Typed REST API clients (GET/PUT)
+├── hooks/           ← React Query hooks bridging UI and APIs (e.g., useCluster, useWorkers)
+├── services/        ← WebSocket singleton managing live connections
+├── state/           ← Zustand store for connection status and real-time event triggers
+└── utils/           ← Config and QueryClient setup
 ```
 
-The mock layer is the **only thing that changes** in Phase 2. Components and pages are already wired to receive typed data as props — replacing the source of that data does not require rewriting any UI component.
+The UI components do not directly call `fetch()` or `WebSocket` APIs. They simply consume data from the React Query hooks:
 
-## Migrating Mock Data to Real API (Phase 2)
-
-When the Spring Boot backend is ready, the integration path is:
-
-**Step 1 — Add a service layer:**
-
-```typescript
-// src/services/clusterService.ts
-export async function getClusterSummary(): Promise<ClusterSummary> {
-  const res = await fetch('/api/cluster/summary');
-  return res.json();
-}
-
-export async function getWorkers(): Promise<Worker[]> {
-  const res = await fetch('/api/workers');
-  return res.json();
+```tsx
+export default function Dashboard() {
+  const { data: cluster, isLoading, isError } = useClusterSummary();
+  
+  if (isLoading) return <LoadingSkeleton />;
+  if (isError) return <ErrorBanner message="Failed to fetch cluster data" />;
+  
+  return <ClusterStatusBadge status={cluster.status} />;
 }
 ```
-
-**Step 2 — Swap the import in each page (one line change):**
-
-```diff
-// src/pages/Dashboard/index.tsx
-- import { mockClusterSummary } from '../../mock/cluster';
-- import { mockWorkers }        from '../../mock/workers';
-+ const clusterSummary = await getClusterSummary();
-+ const workers        = await getWorkers();
-```
-
-**Components are untouched.** They only accept typed props — the source of those props is irrelevant to them.
 
 ## Running the Frontend
 
@@ -570,11 +553,11 @@ The project will be developed incrementally.
 
 ### Phase 2 — Frontend Logic
 
-* [ ] API service layer
-* [ ] Application state
-* [ ] Backend integration
-* [ ] Real-time updates
-* [ ] Error handling
+* [x] API service layer
+* [x] Application state
+* [x] Backend integration
+* [x] Real-time updates
+* [x] Error handling
 
 ### Phase 3 — Coordinator
 
