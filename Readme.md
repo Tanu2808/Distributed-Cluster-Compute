@@ -258,7 +258,86 @@ Coordinator configuration includes:
 
 ---
 
+# Frontend UI
+
+> **Status: Phase 1 Complete** — Fully navigable UI using realistic mock data.
+
+The frontend is a React 18 + TypeScript + Vite application styled with Tailwind CSS v3.
+
+## Current State
+
+The UI is **fully functional but uses mock data**.
+
+All data displayed — worker stats, CPU/memory/GPU metrics, cluster events, settings — comes from static files in `src/mock/`. No backend connection exists yet. This is intentional: Phase 1 is a dedicated UI branch focused purely on building the visual layer.
+
+The application is **not a prototype with placeholder boxes**. Every page renders real-looking data with working charts, status indicators, sortable tables, a detail modal drawer, and interactive settings controls. The goal is that when you open the app, it looks and behaves exactly as the finished product will — just powered by mock data instead of a live backend.
+
+## Pages
+
+| Page | Route | Description |
+|---|---|---|
+| Dashboard | `/` | Cluster status, aggregated resource cards (CPU/RAM/GPU/Storage), 4 utilization charts, worker table, events feed |
+| Nodes | `/nodes` | Grid + list view of workers, search, status filter, click-to-expand detail drawer |
+| Cluster Observability | `/observability` | "Logical Cluster" hero, worker→cluster contribution diagram, per-resource sections with charts |
+| Cluster Settings | `/settings` | Tabbed settings: Coordinator, Worker Registration, Resource Config, Monitoring |
+
+## Mock Data Layer
+
+```text
+src/mock/
+├── workers.ts    ← 3 workers: PC-01 (Online), PC-02 (Busy), PC-03 (Offline)
+├── cluster.ts    ← Aggregated cluster summary + time-series chart data
+├── events.ts     ← 10 realistic cluster lifecycle events
+└── settings.ts   ← Default coordinator/worker configuration values
+```
+
+The mock layer is the **only thing that changes** in Phase 2. Components and pages are already wired to receive typed data as props — replacing the source of that data does not require rewriting any UI component.
+
+## Migrating Mock Data to Real API (Phase 2)
+
+When the Spring Boot backend is ready, the integration path is:
+
+**Step 1 — Add a service layer:**
+
+```typescript
+// src/services/clusterService.ts
+export async function getClusterSummary(): Promise<ClusterSummary> {
+  const res = await fetch('/api/cluster/summary');
+  return res.json();
+}
+
+export async function getWorkers(): Promise<Worker[]> {
+  const res = await fetch('/api/workers');
+  return res.json();
+}
+```
+
+**Step 2 — Swap the import in each page (one line change):**
+
+```diff
+// src/pages/Dashboard/index.tsx
+- import { mockClusterSummary } from '../../mock/cluster';
+- import { mockWorkers }        from '../../mock/workers';
++ const clusterSummary = await getClusterSummary();
++ const workers        = await getWorkers();
+```
+
+**Components are untouched.** They only accept typed props — the source of those props is irrelevant to them.
+
+## Running the Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the displayed URL (default: `http://localhost:5173`).
+
+---
+
 # Communication
+
 
 The Coordinator and Worker Agents communicate using a persistent communication channel.
 
@@ -399,11 +478,14 @@ These advanced capabilities are intentionally separated from the initial cluster
 
 ## Frontend
 
-* React
-* TypeScript
-* Vite
-* Tailwind CSS
-* Charting library
+* React 18
+* TypeScript 5
+* Vite 8
+* Tailwind CSS v3
+* Recharts (charts)
+* React Router v6 (routing)
+* Lucide React (icons)
+* Inter (Google Fonts)
 
 ## Communication
 
@@ -425,13 +507,30 @@ These advanced capabilities are intentionally separated from the initial cluster
 ```text
 distributed-compute-cluster/
 │
-├── frontend/
+├── frontend/                   ← React + TypeScript + Vite (Phase 1 complete)
+│   └── src/
+│       ├── app/                ← React Router entry
+│       ├── types/              ← Shared TypeScript interfaces
+│       ├── mock/               ← Mock data layer (replaced by API in Phase 2)
+│       ├── components/         ← Reusable UI components
+│       │   ├── cards/
+│       │   ├── charts/
+│       │   ├── tables/
+│       │   ├── status/
+│       │   ├── navigation/
+│       │   ├── layout/
+│       │   └── modals/
+│       └── pages/
+│           ├── Dashboard/
+│           ├── Nodes/
+│           ├── Observability/
+│           └── Settings/
 │
-├── coordinator/
+├── coordinator/                ← Phase 3 (Spring Boot, planned)
 │   ├── src/
 │   └── pom.xml
 │
-├── worker-agent/
+├── worker-agent/               ← Phase 4 (Java agent, planned)
 │   ├── src/
 │   └── pom.xml
 │
@@ -455,12 +554,19 @@ distributed-compute-cluster/
 
 The project will be developed incrementally.
 
-### Phase 1 — UI
+### Phase 1 — UI ✅ Complete
 
-* [x] Dashboard design
-* [x] Nodes page design
-* [x] Cluster Settings design
-* [x] Cluster Observability design
+* [x] Project scaffold — React 18 + TypeScript + Vite + Tailwind CSS v3
+* [x] Design system — dark theme, color palette, typography, animations
+* [x] Persistent sidebar (collapsible) + top navigation bar
+* [x] Shared component library — cards, charts, tables, status badges, modal
+* [x] TypeScript type definitions for all domain models
+* [x] Realistic mock data layer — workers, cluster summary, events, settings
+* [x] Dashboard — cluster status, aggregated resources, utilization charts, worker table, events feed
+* [x] Nodes page — grid/list view, search, filter, worker cards, detail slide-over drawer
+* [x] Cluster Observability — logical cluster hero, worker→cluster SVG diagram, per-resource sections
+* [x] Cluster Settings — tabbed sections, toggles, sliders, dropdowns, save/reset
+* [x] Production build verified (`npm run build` exits 0)
 
 ### Phase 2 — Frontend Logic
 
