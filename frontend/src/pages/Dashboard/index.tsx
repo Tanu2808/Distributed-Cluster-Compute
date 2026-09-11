@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import {
-  Cpu, MemoryStick, Zap, HardDrive, Server,
-  Activity
+  Cpu, MemoryStick, Zap, HardDrive, Server, Activity
 } from 'lucide-react';
 import { ResourceCard } from '../../components/cards/ResourceCard';
-
 import { AreaChartWidget } from '../../components/charts/AreaChartWidget';
 import { WorkerTable } from '../../components/tables/WorkerTable';
 import { WorkerDetailModal } from '../../components/modals/WorkerDetailModal';
-import { mockClusterSummary, mockChartData } from '../../mock/cluster';
-import { mockWorkers } from '../../mock/workers';
-import { mockEvents } from '../../mock/events';
+import { CardSkeleton, LoadingSkeleton } from '../../components/feedback/LoadingSkeleton';
+import { ErrorBanner } from '../../components/feedback/ErrorBanner';
+import { useClusterSummary } from '../../hooks/useCluster';
+import { useWorkers } from '../../hooks/useWorkers';
+import { useClusterEvents } from '../../hooks/useEvents';
+import { mockChartData } from '../../mock/cluster';
 import type { Worker, ClusterEvent } from '../../types';
 
 const eventSeverityStyles: Record<string, string> = {
@@ -54,99 +55,133 @@ function EventItem({ event }: { event: ClusterEvent }) {
 
 export default function Dashboard() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
-  const s = mockClusterSummary;
+
+  const {
+    data: cluster,
+    isLoading: clusterLoading,
+    isError: clusterError,
+    error: clusterErr,
+    refetch: refetchCluster,
+  } = useClusterSummary();
+
+  const {
+    data: workers = [],
+    isLoading: workersLoading,
+    isError: workersError,
+    refetch: refetchWorkers,
+  } = useWorkers();
+
+  const {
+    data: events = [],
+    isLoading: eventsLoading,
+    isError: eventsError,
+    refetch: refetchEvents,
+  } = useClusterEvents();
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
+
+      {/* Error banners */}
+      {clusterError && (
+        <ErrorBanner
+          message={`Failed to load cluster data: ${clusterErr?.message ?? 'Unknown error'}`}
+          onRetry={() => refetchCluster()}
+        />
+      )}
+      {workersError && (
+        <ErrorBanner message="Failed to load workers." onRetry={() => refetchWorkers()} />
+      )}
+      {eventsError && (
+        <ErrorBanner message="Failed to load events." onRetry={() => refetchEvents()} />
+      )}
+
       {/* Cluster Status Strip */}
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-6">
-          <div>
-            <p className="section-title mb-1">Cluster</p>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm font-semibold text-green-400">{s.status}</span>
+      {clusterLoading ? (
+        <div className="card p-4"><LoadingSkeleton rows={1} /></div>
+      ) : cluster ? (
+        <div className="card p-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div>
+              <p className="section-title mb-1">Cluster</p>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-sm font-semibold text-green-400">{cluster.status}</span>
+              </div>
             </div>
-          </div>
-          <div className="w-px h-8 bg-slate-800" />
-          <div>
-            <p className="section-title mb-1">Coordinator</p>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-sm font-semibold text-slate-200">{s.coordinatorStatus}</span>
+            <div className="w-px h-8 bg-slate-800" />
+            <div>
+              <p className="section-title mb-1">Coordinator</p>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-400" />
+                <span className="text-sm font-semibold text-slate-200">{cluster.coordinatorStatus}</span>
+              </div>
             </div>
-          </div>
-          <div className="w-px h-8 bg-slate-800" />
-          <div>
-            <p className="section-title mb-1">Workers</p>
-            <p className="text-sm font-semibold text-slate-200">{s.totalWorkers} total</p>
-          </div>
-          <div>
-            <p className="section-title mb-1">Connected</p>
-            <p className="text-sm font-semibold text-green-400">{s.connectedWorkers}</p>
-          </div>
-          <div>
-            <p className="section-title mb-1">Active</p>
-            <p className="text-sm font-semibold text-amber-400">{s.activeWorkers}</p>
-          </div>
-          <div>
-            <p className="section-title mb-1">Offline</p>
-            <p className="text-sm font-semibold text-slate-500">{s.offlineWorkers}</p>
+            <div className="w-px h-8 bg-slate-800" />
+            <div>
+              <p className="section-title mb-1">Workers</p>
+              <p className="text-sm font-semibold text-slate-200">{cluster.totalWorkers} total</p>
+            </div>
+            <div>
+              <p className="section-title mb-1">Connected</p>
+              <p className="text-sm font-semibold text-green-400">{cluster.connectedWorkers}</p>
+            </div>
+            <div>
+              <p className="section-title mb-1">Active</p>
+              <p className="text-sm font-semibold text-amber-400">{cluster.activeWorkers}</p>
+            </div>
+            <div>
+              <p className="section-title mb-1">Offline</p>
+              <p className="text-sm font-semibold text-slate-500">{cluster.offlineWorkers}</p>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       {/* Aggregated Resources */}
       <div>
         <h2 className="section-title mb-3">Aggregated Cluster Resources</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <ResourceCard
-            label="CPU Cores"
-            icon={<Cpu size={15} />}
-            used={s.usedCpuCores}
-            total={s.totalCpuCores}
-            usedLabel={`${s.usedCpuCores} cores`}
-            totalLabel={`${s.totalCpuCores} cores`}
-          />
-          <ResourceCard
-            label="Memory"
-            icon={<MemoryStick size={15} />}
-            used={s.usedMemoryGb}
-            total={s.totalMemoryGb}
-            usedLabel={`${s.usedMemoryGb} GB`}
-            totalLabel={`${s.totalMemoryGb} GB`}
-            colorClass="bg-violet-500"
-          />
-          <ResourceCard
-            label="GPUs"
-            icon={<Zap size={15} />}
-            used={s.usedGpus}
-            total={s.totalGpus}
-            usedLabel={`${s.usedGpus} allocated`}
-            totalLabel={`${s.totalGpus} total`}
-            colorClass="bg-emerald-500"
-          />
-          <ResourceCard
-            label="Storage"
-            icon={<HardDrive size={15} />}
-            used={s.usedStorageTb}
-            total={s.totalStorageTb}
-            usedLabel={`${s.usedStorageTb.toFixed(1)} TB`}
-            totalLabel={`${s.totalStorageTb} TB`}
-            colorClass="bg-amber-500"
-          />
-        </div>
+        {clusterLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[0,1,2,3].map(i => <CardSkeleton key={i} />)}
+          </div>
+        ) : cluster ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <ResourceCard
+              label="CPU Cores" icon={<Cpu size={15} />}
+              used={cluster.usedCpuCores} total={cluster.totalCpuCores}
+              usedLabel={`${cluster.usedCpuCores} cores`} totalLabel={`${cluster.totalCpuCores} cores`}
+            />
+            <ResourceCard
+              label="Memory" icon={<MemoryStick size={15} />}
+              used={cluster.usedMemoryGb} total={cluster.totalMemoryGb}
+              usedLabel={`${cluster.usedMemoryGb} GB`} totalLabel={`${cluster.totalMemoryGb} GB`}
+              colorClass="bg-violet-500"
+            />
+            <ResourceCard
+              label="GPUs" icon={<Zap size={15} />}
+              used={cluster.usedGpus} total={cluster.totalGpus}
+              usedLabel={`${cluster.usedGpus} allocated`} totalLabel={`${cluster.totalGpus} total`}
+              colorClass="bg-emerald-500"
+            />
+            <ResourceCard
+              label="Storage" icon={<HardDrive size={15} />}
+              used={cluster.usedStorageTb} total={cluster.totalStorageTb}
+              usedLabel={`${cluster.usedStorageTb.toFixed(1)} TB`} totalLabel={`${cluster.totalStorageTb} TB`}
+              colorClass="bg-amber-500"
+            />
+          </div>
+        ) : null}
       </div>
 
-      {/* Charts */}
+      {/* Charts — use mock time-series until backend streams metrics history */}
       <div>
         <h2 className="section-title mb-3">Resource Utilization</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'CPU', data: mockChartData.cpu, color: '#06b6d4', unit: '%' },
-            { label: 'Memory', data: mockChartData.memory, color: '#8b5cf6', unit: '%' },
-            { label: 'GPU', data: mockChartData.gpu, color: '#10b981', unit: '%' },
-            { label: 'Network In', data: mockChartData.networkIn, color: '#f59e0b', unit: ' Mbps' },
+            { label: 'CPU',        data: mockChartData.cpu,       color: '#06b6d4', unit: '%' },
+            { label: 'Memory',     data: mockChartData.memory,    color: '#8b5cf6', unit: '%' },
+            { label: 'GPU',        data: mockChartData.gpu,       color: '#10b981', unit: '%' },
+            { label: 'Network In', data: mockChartData.networkIn,  color: '#f59e0b', unit: ' Mbps' },
           ].map(chart => (
             <div key={chart.label} className="card p-4">
               <div className="flex items-center justify-between mb-3">
@@ -155,13 +190,7 @@ export default function Dashboard() {
                   {chart.data[chart.data.length - 1]?.value ?? 0}{chart.unit}
                 </span>
               </div>
-              <AreaChartWidget
-                data={chart.data}
-                label={chart.label}
-                color={chart.color}
-                unit={chart.unit}
-                height={100}
-              />
+              <AreaChartWidget data={chart.data} label={chart.label} color={chart.color} unit={chart.unit} height={100} />
             </div>
           ))}
         </div>
@@ -169,27 +198,31 @@ export default function Dashboard() {
 
       {/* Worker Table + Events */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Worker Overview */}
         <div className="xl:col-span-2 card">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
             <Server size={15} className="text-accent-400" />
             <h2 className="text-sm font-semibold text-slate-200">Worker Overview</h2>
-            <span className="ml-auto text-xs text-slate-500">{mockWorkers.length} workers</span>
+            <span className="ml-auto text-xs text-slate-500">{workers.length} workers</span>
           </div>
-          <WorkerTable workers={mockWorkers} onWorkerClick={setSelectedWorker} />
+          {workersLoading ? (
+            <div className="p-5"><LoadingSkeleton rows={3} /></div>
+          ) : (
+            <WorkerTable workers={workers} onWorkerClick={setSelectedWorker} />
+          )}
         </div>
 
-        {/* Recent Events */}
         <div className="card">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-800">
             <Activity size={15} className="text-accent-400" />
             <h2 className="text-sm font-semibold text-slate-200">Recent Events</h2>
-            <span className="ml-auto text-xs text-slate-500">{mockEvents.length} events</span>
+            <span className="ml-auto text-xs text-slate-500">{events.length} events</span>
           </div>
           <div className="px-5 py-2 max-h-96 overflow-y-auto">
-            {[...mockEvents].reverse().map(evt => (
-              <EventItem key={evt.id} event={evt} />
-            ))}
+            {eventsLoading ? (
+              <div className="py-3"><LoadingSkeleton rows={4} /></div>
+            ) : (
+              [...events].reverse().map(evt => <EventItem key={evt.id} event={evt} />)
+            )}
           </div>
         </div>
       </div>

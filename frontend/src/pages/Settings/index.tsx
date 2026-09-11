@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Server, Users, Shield, Cpu, BarChart3, Check, RotateCcw
+  Server, Users, Shield, Cpu, BarChart3, Check, RotateCcw, Loader2
 } from 'lucide-react';
-import { mockSettings } from '../../mock/settings';
+import { LoadingSkeleton } from '../../components/feedback/LoadingSkeleton';
+import { ErrorBanner } from '../../components/feedback/ErrorBanner';
+import { useSettings, useUpdateSettings } from '../../hooks/useSettings';
 import type { ClusterSettings, RegistrationMode, LogLevel } from '../../types';
 
 type SettingsTab = 'coordinator' | 'registration' | 'resources' | 'monitoring';
@@ -64,35 +66,52 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('coordinator');
-  const [settings, setSettings] = useState<ClusterSettings>(mockSettings);
-  const [saved, setSaved] = useState(false);
+  
+  const { data: serverSettings, isLoading, isError, refetch } = useSettings();
+  const { mutate: updateSettings, isPending, isSuccess, isError: isMutationError } = useUpdateSettings();
+
+  const [settings, setSettings] = useState<ClusterSettings | null>(null);
+
+  useEffect(() => {
+    if (serverSettings) setSettings(serverSettings);
+  }, [serverSettings]);
 
   function handleSave() {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    if (settings) updateSettings(settings);
   }
 
   function handleReset() {
-    setSettings(mockSettings);
+    if (serverSettings) setSettings(serverSettings);
   }
 
-  const updateCoord = (patch: Partial<typeof settings.coordinator>) =>
-    setSettings(s => ({ ...s, coordinator: { ...s.coordinator, ...patch } }));
+  const updateCoord = (patch: Partial<NonNullable<typeof settings>['coordinator']>) =>
+    setSettings(s => s ? { ...s, coordinator: { ...s.coordinator, ...patch } } : null);
 
-  const updateReg = (patch: Partial<typeof settings.workerRegistration>) =>
-    setSettings(s => ({ ...s, workerRegistration: { ...s.workerRegistration, ...patch } }));
+  const updateReg = (patch: Partial<NonNullable<typeof settings>['workerRegistration']>) =>
+    setSettings(s => s ? { ...s, workerRegistration: { ...s.workerRegistration, ...patch } } : null);
 
-  const updateRes = (patch: Partial<typeof settings.resourceConfig>) =>
-    setSettings(s => ({ ...s, resourceConfig: { ...s.resourceConfig, ...patch } }));
+  const updateRes = (patch: Partial<NonNullable<typeof settings>['resourceConfig']>) =>
+    setSettings(s => s ? { ...s, resourceConfig: { ...s.resourceConfig, ...patch } } : null);
 
-  const updateMon = (patch: Partial<typeof settings.monitoring>) =>
-    setSettings(s => ({ ...s, monitoring: { ...s.monitoring, ...patch } }));
+  const updateMon = (patch: Partial<NonNullable<typeof settings>['monitoring']>) =>
+    setSettings(s => s ? { ...s, monitoring: { ...s.monitoring, ...patch } } : null);
+
+  if (isLoading || !settings) {
+    return (
+      <div className="p-6">
+        <div className="card p-6 max-w-4xl"><LoadingSkeleton rows={8} /></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 animate-fade-in">
-      <div className="max-w-4xl">
+      <div className="max-w-4xl space-y-4">
+        {isError && <ErrorBanner message="Failed to load settings." onRetry={() => refetch()} />}
+        {isMutationError && <ErrorBanner message="Failed to save settings." />}
+
         {/* Tabs */}
-        <div className="flex gap-1 bg-surface-900 border border-slate-800 rounded-xl p-1 mb-6">
+        <div className="flex gap-1 bg-surface-900 border border-slate-800 rounded-xl p-1">
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -337,26 +356,27 @@ export default function Settings() {
           </button>
           <button
             onClick={handleSave}
+            disabled={isPending}
             className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-              saved
+              isSuccess
                 ? 'bg-green-600 text-white'
+                : isPending
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 : 'bg-accent-500 hover:bg-accent-400 text-white'
             }`}
           >
-            {saved ? (
-              <>
-                <Check size={14} />
-                Saved
-              </>
+            {isSuccess ? (
+              <><Check size={14} /> Saved</>
+            ) : isPending ? (
+              <><Loader2 size={14} className="animate-spin" /> Saving…</>
             ) : (
               'Save Changes'
             )}
           </button>
         </div>
 
-        {/* Notice */}
         <p className="text-xs text-slate-700 mt-4 text-center">
-          Settings are applied to local mock state. Backend integration will apply changes to the coordinator.
+          In mock mode, changes are applied immediately to the local cache.
         </p>
       </div>
     </div>

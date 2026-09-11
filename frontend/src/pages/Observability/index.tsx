@@ -1,25 +1,12 @@
 import { Cpu, MemoryStick, Zap, HardDrive, Network, Server } from 'lucide-react';
-
 import { AreaChartWidget } from '../../components/charts/AreaChartWidget';
 import { DonutChart } from '../../components/charts/DonutChart';
 import { BarChartWidget } from '../../components/charts/BarChartWidget';
-import { mockClusterSummary, mockChartData } from '../../mock/cluster';
-import { mockWorkers } from '../../mock/workers';
-
-const s = mockClusterSummary;
-
-// Per-worker CPU contribution
-const cpuContrib = mockWorkers.map(w => ({
-  name: w.hostname,
-  value: w.status === 'OFFLINE' ? 0 : w.cpu.cores,
-  color: w.status === 'OFFLINE' ? '#334155' : w.status === 'BUSY' ? '#f59e0b' : '#06b6d4',
-}));
-
-const memContrib = mockWorkers.map(w => ({
-  name: w.hostname,
-  value: w.status === 'OFFLINE' ? 0 : w.memory.totalGb,
-  color: w.status === 'OFFLINE' ? '#334155' : '#8b5cf6',
-}));
+import { LoadingSkeleton } from '../../components/feedback/LoadingSkeleton';
+import { ErrorBanner } from '../../components/feedback/ErrorBanner';
+import { useClusterSummary } from '../../hooks/useCluster';
+import { useWorkers } from '../../hooks/useWorkers';
+import { mockChartData } from '../../mock/cluster';
 
 function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle?: string }) {
   return (
@@ -51,13 +38,39 @@ function MetricBox({ label, value, sub, highlight = false }: {
 }
 
 export default function Observability() {
-  const cpuPct = s.cpuUsagePercent;
-  const memPct = s.memoryUsagePercent;
-  const storagePct = s.storageUsagePercent;
-  const gpuPct = s.totalGpus > 0 ? Math.round((s.usedGpus / s.totalGpus) * 100) : 0;
+  const { data: s, isLoading: clusterLoading, isError: clusterError, refetch: refetchCluster } = useClusterSummary();
+  const { data: workers = [], isLoading: workersLoading, isError: workersError, refetch: refetchWorkers } = useWorkers();
+
+  const cpuPct = s?.cpuUsagePercent ?? 0;
+  const memPct = s?.memoryUsagePercent ?? 0;
+  const storagePct = s?.storageUsagePercent ?? 0;
+  const gpuPct = (s?.totalGpus ?? 0) > 0 ? Math.round(((s?.usedGpus ?? 0) / (s?.totalGpus ?? 1)) * 100) : 0;
+
+  // Per-worker CPU contribution
+  const cpuContrib = workers.map(w => ({
+    name: w.hostname,
+    value: w.status === 'OFFLINE' ? 0 : w.cpu.cores,
+    color: w.status === 'OFFLINE' ? '#334155' : w.status === 'BUSY' ? '#f59e0b' : '#06b6d4',
+  }));
+
+  const memContrib = workers.map(w => ({
+    name: w.hostname,
+    value: w.status === 'OFFLINE' ? 0 : w.memory.totalGb,
+    color: w.status === 'OFFLINE' ? '#334155' : '#8b5cf6',
+  }));
 
   return (
     <div className="p-6 space-y-8 animate-fade-in">
+      {(clusterError || workersError) && (
+        <ErrorBanner message="Failed to load observability data." onRetry={() => { refetchCluster(); refetchWorkers(); }} />
+      )}
+
+      {(clusterLoading || workersLoading) && (
+        <div className="card p-6"><LoadingSkeleton rows={6} /></div>
+      )}
+
+      {s && !clusterLoading && !workersLoading && (
+        <div className="space-y-8">
 
       {/* ── Hero: Logical Cluster ───────────────────────────────────────────── */}
       <div className="relative card overflow-hidden">
@@ -116,7 +129,7 @@ export default function Observability() {
 
           {/* Workers */}
           <div className="grid grid-cols-3 gap-4 w-full max-w-xl -mt-2">
-            {mockWorkers.map(w => {
+            {workers.map(w => {
               const offline = w.status === 'OFFLINE';
               return (
                 <div key={w.id} className={`rounded-xl border px-4 py-3 text-center transition-all ${
@@ -199,7 +212,7 @@ export default function Observability() {
         </div>
         <div className="space-y-2">
           <p className="section-title mb-3">GPU Inventory</p>
-          {mockWorkers.map(w => (
+          {workers.map(w => (
             <div key={w.id} className="flex items-center gap-4 p-3 rounded-lg bg-surface-800 border border-slate-800">
               <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{
                 backgroundColor: w.status === 'OFFLINE' ? '#334155' : w.gpu ? '#10b981' : '#334155'
@@ -270,6 +283,8 @@ export default function Observability() {
           </div>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }
