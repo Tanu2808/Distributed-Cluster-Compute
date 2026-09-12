@@ -5,7 +5,7 @@ worker:
   name: ${HOSTNAME:local-worker}
   coordinator:
     url: ${COORDINATOR_URL:http://localhost:8080}
-    api-key: ${COORDINATOR_API_KEY:default-secret-key}
+    api-key: ${COORDINATOR_API_KEY:admin_secret}
   heartbeat:
     interval-ms: ${HEARTBEAT_INTERVAL:5000}
   metrics:

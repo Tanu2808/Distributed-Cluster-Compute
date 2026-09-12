@@ -2,11 +2,8 @@ package com.cluster.worker.monitoring;
 
 import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
-import oshi.hardware.HWDiskStore;
 import oshi.software.os.OSFileStore;
 import oshi.software.os.OperatingSystem;
-
-import java.util.List;
 
 @Component
 public class OshiDiskMetricsProvider implements DiskMetricsProvider {

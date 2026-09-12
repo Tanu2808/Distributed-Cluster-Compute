@@ -1,7 +1,10 @@
 package com.cluster.worker.service;
 
-import com.cluster.worker.communication.CoordinatorClient;
-import com.cluster.worker.communication.HeartbeatPayload;
+import com.cluster.shared.protocol.HeartbeatMessage;
+import com.cluster.shared.protocol.MessageEnvelope;
+import com.cluster.shared.protocol.MessageType;
+import com.cluster.shared.protocol.ResourceUpdateMessage;
+import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.model.WorkerState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
@@ -9,21 +12,21 @@ import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 public class HeartbeatService {
 
-    private final CoordinatorClient coordinatorClient;
+    private final WebSocketConnectionManager connectionManager;
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
     private final WorkerLifecycleService lifecycleService;
 
-    public HeartbeatService(CoordinatorClient coordinatorClient,
+    public HeartbeatService(WebSocketConnectionManager connectionManager,
                             WorkerIdentityGenerator identityGenerator,
                             SystemMetricsProvider metricsProvider,
                             WorkerLifecycleService lifecycleService) {
-        this.coordinatorClient = coordinatorClient;
+        this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.lifecycleService = lifecycleService;
@@ -36,23 +39,38 @@ public class HeartbeatService {
             return;
         }
 
-        SystemMetrics metrics = metricsProvider.collectMetrics();
-        HeartbeatPayload payload = new HeartbeatPayload();
-        payload.setTimestamp(LocalDateTime.now());
-        payload.setCpuUsagePercent(metrics.getCpuUsagePercent());
+        String workerId = identityGenerator.getOrCreateWorkerId();
         
-        double memoryUsage = 0.0;
-        if (metrics.getTotalMemoryMb() > 0) {
-            memoryUsage = ((double) metrics.getUsedMemoryMb() / metrics.getTotalMemoryMb()) * 100.0;
-        }
-        payload.setMemoryUsagePercent(memoryUsage);
-        payload.setActiveTasks(0); // Dummy for now
-        payload.setResourceInformation(metrics.getAdditionalInfo());
+        HeartbeatMessage heartbeatMsg = new HeartbeatMessage();
+        heartbeatMsg.setStatus(lifecycleService.getState().name());
+        heartbeatMsg.setRunningTasks(0); // Dummy for now
 
-        boolean success = coordinatorClient.sendHeartbeat(identityGenerator.getOrCreateWorkerId(), payload);
-        if (!success) {
-            System.err.println("Heartbeat failed, coordinator might be down.");
-            lifecycleService.handleDisconnection();
-        }
+        MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
+                .type(MessageType.HEARTBEAT)
+                .workerId(workerId)
+                .timestamp(Instant.now())
+                .payload(heartbeatMsg)
+                .build();
+
+        connectionManager.sendMessage("/app/worker.heartbeat", hbEnvelope);
+        
+        // Also send resource update
+        SystemMetrics metrics = metricsProvider.collectMetrics();
+        ResourceUpdateMessage resourceMsg = new ResourceUpdateMessage();
+        resourceMsg.setCpuUsagePercent(metrics.getCpuUsagePercent());
+        resourceMsg.setMemoryUsedBytes(metrics.getUsedMemoryMb() * 1024L * 1024L);
+        resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
+        resourceMsg.setGpuUsagePercent(0.0);
+        resourceMsg.setDiskFreeBytes((metrics.getTotalStorageMb() - metrics.getUsedStorageMb()) * 1024L * 1024L);
+        resourceMsg.setDiskTotalBytes(metrics.getTotalStorageMb() * 1024L * 1024L);
+        
+        MessageEnvelope<ResourceUpdateMessage> resEnvelope = MessageEnvelope.<ResourceUpdateMessage>builder()
+                .type(MessageType.RESOURCE_UPDATE)
+                .workerId(workerId)
+                .timestamp(Instant.now())
+                .payload(resourceMsg)
+                .build();
+
+        connectionManager.sendMessage("/app/worker.resource", resEnvelope);
     }
 }

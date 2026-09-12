@@ -1,7 +1,9 @@
 package com.cluster.worker.service;
 
-import com.cluster.worker.communication.CoordinatorClient;
-import com.cluster.worker.communication.RegistrationPayload;
+import com.cluster.shared.protocol.MessageEnvelope;
+import com.cluster.shared.protocol.MessageType;
+import com.cluster.shared.protocol.RegisterMessage;
+import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.model.WorkerState;
@@ -9,81 +11,122 @@ import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.stomp.StompFrameHandler;
+import org.springframework.messaging.simp.stomp.StompHeaders;
+import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PreDestroy;
+import java.lang.reflect.Type;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class WorkerLifecycleService {
 
-    private final CoordinatorClient coordinatorClient;
+    private final WebSocketConnectionManager connectionManager;
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
     private final WorkerConfig config;
     private WorkerState state = WorkerState.STARTING;
+    private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
 
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
 
-    public WorkerLifecycleService(CoordinatorClient coordinatorClient,
+    public WorkerLifecycleService(WebSocketConnectionManager connectionManager,
                                   WorkerIdentityGenerator identityGenerator,
                                   SystemMetricsProvider metricsProvider,
                                   WorkerConfig config) {
-        this.coordinatorClient = coordinatorClient;
+        this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.config = config;
+        
+        this.connectionManager.setCallbacks(this::onConnected, this::onDisconnected);
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
         if (state == WorkerState.STARTING || state == WorkerState.DISCONNECTED) {
-            registerWithBackoff();
+            connectWithBackoff();
         }
     }
 
-    private void registerWithBackoff() {
+    private void connectWithBackoff() {
+        if (state == WorkerState.ONLINE) {
+            return;
+        }
         state = WorkerState.REGISTERING;
-        SystemMetrics metrics = metricsProvider.collectMetrics();
-        RegistrationPayload payload = createRegistrationPayload(metrics);
-
-        boolean registered = coordinatorClient.register(payload);
-        if (registered) {
-            state = WorkerState.ONLINE;
-            System.out.println("Worker registered successfully with ID: " + payload.getId());
-        } else {
-            System.out.println("Failed to register with coordinator. Retrying in 5 seconds...");
-            executorService.schedule(this::registerWithBackoff, 5, TimeUnit.SECONDS);
-        }
+        System.out.println("Attempting to connect to coordinator...");
+        connectionManager.connect();
     }
 
-    private RegistrationPayload createRegistrationPayload(SystemMetrics metrics) {
-        RegistrationPayload payload = new RegistrationPayload();
-        payload.setId(identityGenerator.getOrCreateWorkerId());
-        payload.setName(config.getName());
-        payload.setCpuCores(metrics.getCpuCores());
-        payload.setMemoryRamMb(metrics.getTotalMemoryMb());
-        payload.setGpuCount(metrics.getGpuCount());
-        payload.setStorageMb(metrics.getTotalStorageMb());
-        payload.setNetworkBps(metrics.getNetworkBytesSent() + metrics.getNetworkBytesReceived()); // Simplification
+    private void onConnected(StompSession session) {
+        System.out.println("WebSocket connected. Sending REGISTER message...");
+        isReconnecting.set(false);
         
-        payload.setOperatingSystem(System.getProperty("os.name"));
-        payload.setArchitecture(System.getProperty("os.arch"));
-        payload.setAgentVersion("1.0.0");
+        String workerId = identityGenerator.getOrCreateWorkerId();
+        
+        // Subscribe to REGISTER_ACK
+        session.subscribe("/topic/worker." + workerId + ".control", new StompFrameHandler() {
+            @Override
+            public Type getPayloadType(StompHeaders headers) {
+                return MessageEnvelope.class;
+            }
+
+            @Override
+            public void handleFrame(StompHeaders headers, Object payload) {
+                if (payload instanceof MessageEnvelope) {
+                    MessageEnvelope<?> envelope = (MessageEnvelope<?>) payload;
+                    if (envelope.getType() == MessageType.REGISTER_ACK) {
+                        state = WorkerState.ONLINE;
+                        System.out.println("Worker registered successfully and is ONLINE.");
+                    }
+                }
+            }
+        });
+        
+        @SuppressWarnings("unused")
+        WorkerConfig ignoredConfig = config;
+        
+        RegisterMessage registerMsg = new RegisterMessage();
         
         try {
             InetAddress localHost = InetAddress.getLocalHost();
-            payload.setHostname(localHost.getHostName());
-            payload.setIpAddress(localHost.getHostAddress());
+            registerMsg.setHostname(localHost.getHostName());
         } catch (UnknownHostException e) {
-            payload.setHostname("unknown");
-            payload.setIpAddress("unknown");
+            registerMsg.setHostname("unknown");
         }
-        return payload;
+        
+        registerMsg.setOsName(System.getProperty("os.name"));
+        registerMsg.setOsVersion(System.getProperty("os.version"));
+        registerMsg.setTags(new HashMap<>()); // dummy for now
+
+        MessageEnvelope<RegisterMessage> envelope = MessageEnvelope.<RegisterMessage>builder()
+                .type(MessageType.REGISTER)
+                .workerId(workerId)
+                .timestamp(Instant.now())
+                .payload(registerMsg)
+                .build();
+                
+        connectionManager.sendMessage("/app/worker.register", envelope);
+    }
+    
+    private void onDisconnected() {
+        if (state == WorkerState.STOPPING) {
+            return;
+        }
+        if (isReconnecting.compareAndSet(false, true)) {
+            System.err.println("Disconnected from coordinator. Reconnecting in 5 seconds...");
+            state = WorkerState.DISCONNECTED;
+            executorService.schedule(this::connectWithBackoff, 5, TimeUnit.SECONDS);
+        }
     }
 
     public WorkerState getState() {
@@ -95,22 +138,13 @@ public class WorkerLifecycleService {
     }
 
     public void handleDisconnection() {
-        if (state != WorkerState.REGISTERING && state != WorkerState.DISCONNECTED && state != WorkerState.STOPPING) {
-            System.err.println("Handling disconnection... transitioning to DISCONNECTED state.");
-            state = WorkerState.DISCONNECTED;
-            registerWithBackoff();
-        }
+        onDisconnected();
     }
 
     @PreDestroy
     public void shutdown() {
         System.out.println("Shutting down worker agent...");
         this.state = WorkerState.STOPPING;
-        try {
-            coordinatorClient.deregister(identityGenerator.getOrCreateWorkerId());
-        } catch (Exception e) {
-            System.err.println("Failed to deregister gracefully: " + e.getMessage());
-        }
         executorService.shutdown();
     }
 }
