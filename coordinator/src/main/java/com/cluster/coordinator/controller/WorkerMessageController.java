@@ -54,9 +54,8 @@ public class WorkerMessageController {
             request.setHostname(registerMessage.getHostname());
             request.setOperatingSystem(registerMessage.getOsName());
             request.setAgentVersion("websocket-agent"); // Default for now
-            // Need default values for resources since the new protocol separates Registration and ResourceUpdate
-            request.setCpuCores(1);
-            request.setMemoryRamMb(1024);
+            request.setCpuCores(registerMessage.getCpuCores());
+            request.setMemoryRamMb(registerMessage.getMemoryMb());
             
             workerService.registerWorker(request);
             

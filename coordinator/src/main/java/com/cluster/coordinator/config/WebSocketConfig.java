@@ -13,7 +13,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic", "/queue");
+        org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
+        taskScheduler.setPoolSize(1);
+        taskScheduler.setThreadNamePrefix("wss-heartbeat-");
+        taskScheduler.initialize();
+
+        config.enableSimpleBroker("/topic", "/queue")
+              .setTaskScheduler(taskScheduler)
+              .setHeartbeatValue(new long[]{10000, 10000});
         config.setApplicationDestinationPrefixes("/app");
     }
 
