@@ -76,12 +76,13 @@ public class WorkerLifecycleService {
         // Subscribe to REGISTER_ACK
         session.subscribe("/topic/worker." + workerId + ".control", new StompFrameHandler() {
             @Override
-            public Type getPayloadType(StompHeaders headers) {
+            @org.springframework.lang.NonNull
+            public Type getPayloadType(@org.springframework.lang.NonNull StompHeaders headers) {
                 return MessageEnvelope.class;
             }
 
             @Override
-            public void handleFrame(StompHeaders headers, Object payload) {
+            public void handleFrame(@org.springframework.lang.NonNull StompHeaders headers, @org.springframework.lang.Nullable Object payload) {
                 if (payload instanceof MessageEnvelope) {
                     MessageEnvelope<?> envelope = (MessageEnvelope<?>) payload;
                     if (envelope.getType() == MessageType.REGISTER_ACK) {

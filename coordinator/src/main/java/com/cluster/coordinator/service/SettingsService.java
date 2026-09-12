@@ -21,7 +21,7 @@ public class SettingsService {
 
     public Map<String, String> getAllSettings() {
         return settingsRepository.findAll().stream()
-                .collect(Collectors.toMap(ClusterSettings::getKey, ClusterSettings::getValue));
+                .collect(Collectors.toMap(s -> s.getKey(), s -> s.getValue()));
     }
 
     @Transactional

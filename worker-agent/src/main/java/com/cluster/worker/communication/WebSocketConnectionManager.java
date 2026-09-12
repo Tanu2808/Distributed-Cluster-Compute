@@ -31,7 +31,7 @@ public class WebSocketConnectionManager {
     private final WebSocketStompClient stompClient;
     private StompSession stompSession;
     
-    private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
     private Consumer<StompSession> onConnectCallback;
     private Runnable onDisconnectCallback;
 
@@ -100,19 +100,19 @@ public class WebSocketConnectionManager {
 
     private class StompSessionHandler extends StompSessionHandlerAdapter {
         @Override
-        public void handleTransportError(StompSession session, Throwable exception) {
+        public void handleTransportError(@org.springframework.lang.NonNull StompSession session, @org.springframework.lang.NonNull Throwable exception) {
             log.error("Transport error: {}", exception.getMessage());
             handleDisconnect();
         }
 
         @Override
-        public void handleException(StompSession session, StompCommand command, StompHeaders headers, byte[] payload, Throwable exception) {
+        public void handleException(@org.springframework.lang.NonNull StompSession session, @org.springframework.lang.Nullable StompCommand command, @org.springframework.lang.NonNull StompHeaders headers, @org.springframework.lang.NonNull byte[] payload, @org.springframework.lang.NonNull Throwable exception) {
             log.error("Stomp exception: {}", exception.getMessage());
             handleDisconnect();
         }
         
         @Override
-        public void afterConnected(StompSession session, StompHeaders connectedHeaders) {
+        public void afterConnected(@org.springframework.lang.NonNull StompSession session, @org.springframework.lang.NonNull StompHeaders connectedHeaders) {
             log.info("STOMP session connected");
         }
     }
