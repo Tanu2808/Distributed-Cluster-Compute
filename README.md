@@ -40,6 +40,32 @@ The platform consists of three primary layers communicating over real-time persi
 - ⏳ **Backend-to-Frontend Push**: Currently pending implementation for real-time frontend WebSocket (`/ws/cluster`).
 - ⏳ **Task Orchestration**: Initial protocol models for executing distributed tasks are built, but the task engine itself is pending.
 
+## How to Configure Connection
+
+The Worker Agent connects to the Coordinator over WebSocket.
+In `worker-agent/src/main/resources/application.yml`:
+- `worker.coordinator.url`: e.g. `http://localhost:8080`
+- `worker.coordinator.api-key`: `admin_secret` (must match Coordinator)
+The WebSocket uses STOMP with Basic Auth headers containing this api-key.
+
+## Protocol Contracts
+
+The system uses STOMP WebSocket messages structured within a `MessageEnvelope`.
+
+- **REGISTER**: Sent by worker to master. Contains hostname, OS, and actual CPU cores/RAM.
+- **REGISTER_ACK**: Sent by master to worker. Acknowledges successful registration.
+- **HEARTBEAT**: Sent by worker periodically. Contains active tasks and usage metrics.
+- **RESOURCE_UPDATE**: Sent by worker to report hardware resource changes.
+- **PING/PONG**: Handled natively at the STOMP transport level via `setHeartbeatValue` (10s interval) to separate transport health from application health.
+
+## REST API
+
+The Coordinator exposes the following REST APIs (Basic Auth: admin/admin_secret):
+- `GET /api/workers` - Lists all registered workers with real-time status and metrics.
+- `GET /api/workers/{id}` - Details for a specific worker.
+- `GET /api/cluster/resources` - Aggregated total CPU cores and RAM across the cluster.
+- `GET /api/cluster/events` - Recent cluster events.
+
 ## How to Start the Complete Project
 
 ### 1. Build the Backend
