@@ -15,5 +15,7 @@ public class RegisterMessage {
     private String hostname;
     private String osName;
     private String osVersion;
+    private int cpuCores;
+    private long memoryMb;
     private Map<String, Object> tags;
 }
