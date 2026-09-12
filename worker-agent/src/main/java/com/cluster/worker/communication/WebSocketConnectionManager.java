@@ -42,6 +42,11 @@ public class WebSocketConnectionManager {
         MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
         converter.setObjectMapper(objectMapper);
         this.stompClient.setMessageConverter(converter);
+        
+        org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
+        taskScheduler.initialize();
+        this.stompClient.setTaskScheduler(taskScheduler);
+        this.stompClient.setDefaultHeartbeat(new long[]{10000, 10000});
     }
 
     public void setCallbacks(Consumer<StompSession> onConnectCallback, Runnable onDisconnectCallback) {

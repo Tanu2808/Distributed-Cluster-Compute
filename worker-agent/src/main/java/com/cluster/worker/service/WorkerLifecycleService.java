@@ -106,6 +106,11 @@ public class WorkerLifecycleService {
         
         registerMsg.setOsName(System.getProperty("os.name"));
         registerMsg.setOsVersion(System.getProperty("os.version"));
+        
+        SystemMetrics currentMetrics = metricsProvider.collectMetrics();
+        registerMsg.setCpuCores(currentMetrics.getCpuCores());
+        registerMsg.setMemoryMb(currentMetrics.getTotalMemoryMb());
+        
         registerMsg.setTags(new HashMap<>()); // dummy for now
 
         MessageEnvelope<RegisterMessage> envelope = MessageEnvelope.<RegisterMessage>builder()
