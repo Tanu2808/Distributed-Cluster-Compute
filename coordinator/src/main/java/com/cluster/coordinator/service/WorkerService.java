@@ -37,6 +37,11 @@ public class WorkerService {
                 .orElse(new Worker(request.getId(), request.getName(), WorkerState.REGISTERING));
         
         worker.setName(request.getName());
+        worker.setHostname(request.getHostname());
+        worker.setIpAddress(request.getIpAddress());
+        worker.setOperatingSystem(request.getOperatingSystem());
+        worker.setArchitecture(request.getArchitecture());
+        worker.setAgentVersion(request.getAgentVersion());
         worker.setState(WorkerState.ONLINE);
         worker = workerRepository.save(worker);
 

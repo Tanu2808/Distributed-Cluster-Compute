@@ -12,6 +12,16 @@ public class Worker {
 
     private String name;
 
+    private String hostname;
+
+    private String ipAddress;
+
+    private String operatingSystem;
+
+    private String architecture;
+
+    private String agentVersion;
+
     @Enumerated(EnumType.STRING)
     private WorkerState state;
 
@@ -44,6 +54,16 @@ public class Worker {
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public String getHostname() { return hostname; }
+    public void setHostname(String hostname) { this.hostname = hostname; }
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+    public String getOperatingSystem() { return operatingSystem; }
+    public void setOperatingSystem(String operatingSystem) { this.operatingSystem = operatingSystem; }
+    public String getArchitecture() { return architecture; }
+    public void setArchitecture(String architecture) { this.architecture = architecture; }
+    public String getAgentVersion() { return agentVersion; }
+    public void setAgentVersion(String agentVersion) { this.agentVersion = agentVersion; }
     public WorkerState getState() { return state; }
     public void setState(WorkerState state) { this.state = state; }
     public LocalDateTime getLastHeartbeat() { return lastHeartbeat; }

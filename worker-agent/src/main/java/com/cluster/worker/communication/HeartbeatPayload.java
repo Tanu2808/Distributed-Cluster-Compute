@@ -1,26 +1,13 @@
-package com.cluster.coordinator.dto;
+package com.cluster.worker.communication;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.PositiveOrZero;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-public class WorkerHeartbeatRequest {
-
+public class HeartbeatPayload {
     private LocalDateTime timestamp;
-
-    @Min(0)
-    @Max(100)
     private double cpuUsagePercent;
-
-    @Min(0)
-    @Max(100)
     private double memoryUsagePercent;
-
-    @PositiveOrZero
     private int activeTasks;
-
     private Map<String, Object> resourceInformation;
 
     // Getters and Setters

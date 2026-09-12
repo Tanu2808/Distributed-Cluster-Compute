@@ -12,6 +12,21 @@ public class WorkerRegistrationRequest {
     @NotBlank
     private String name;
 
+    @NotBlank
+    private String hostname;
+
+    @NotBlank
+    private String ipAddress;
+
+    @NotBlank
+    private String operatingSystem;
+
+    @NotBlank
+    private String architecture;
+
+    @NotBlank
+    private String agentVersion;
+
     @Positive
     private int cpuCores;
 
@@ -42,6 +57,46 @@ public class WorkerRegistrationRequest {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public String getOperatingSystem() {
+        return operatingSystem;
+    }
+
+    public void setOperatingSystem(String operatingSystem) {
+        this.operatingSystem = operatingSystem;
+    }
+
+    public String getArchitecture() {
+        return architecture;
+    }
+
+    public void setArchitecture(String architecture) {
+        this.architecture = architecture;
+    }
+
+    public String getAgentVersion() {
+        return agentVersion;
+    }
+
+    public void setAgentVersion(String agentVersion) {
+        this.agentVersion = agentVersion;
     }
 
     public int getCpuCores() {
