@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-worker-bg text-worker-text antialiased min-h-screen;
+  }
+}

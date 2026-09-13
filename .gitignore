@@ -38,6 +38,7 @@ node_modules/
 dist/
 build/
 dist-ssr/
+node/
 *.local
 .npm
 npm-debug.log*
@@ -82,3 +83,6 @@ application-local.yml
 # Docker
 .docker/
 docker-compose.override.yml
+
+# Worker Agent
+.worker-id
