@@ -1,12 +1,11 @@
 package com.cluster.worker.api;
 
 import com.cluster.worker.config.WorkerConfig;
+import com.cluster.worker.api.dto.WorkerSettingsResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/settings")
@@ -19,12 +18,12 @@ public class SettingsController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getSettings() {
-        return ResponseEntity.ok(Map.of(
-            "workerName", config.getName() != null ? config.getName() : "unnamed-worker",
-            "coordinatorUrl", config.getCoordinator().getUrl(),
-            "heartbeatIntervalMs", config.getHeartbeat().getIntervalMs(),
-            "metricsIntervalMs", config.getMetrics().getIntervalMs()
+    public ResponseEntity<WorkerSettingsResponse> getSettings() {
+        return ResponseEntity.ok(new WorkerSettingsResponse(
+            config.getName() != null ? config.getName() : "unnamed-worker",
+            config.getCoordinator().getUrl(),
+            config.getHeartbeat().getIntervalMs(),
+            config.getMetrics().getIntervalMs()
         ));
     }
 }
