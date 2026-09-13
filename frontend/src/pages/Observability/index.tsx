@@ -49,14 +49,14 @@ export default function Observability() {
   // Per-worker CPU contribution
   const cpuContrib = workers.map(w => ({
     name: w.hostname,
-    value: w.status === 'OFFLINE' ? 0 : w.cpu.cores,
-    color: w.status === 'OFFLINE' ? '#334155' : w.status === 'BUSY' ? '#f59e0b' : '#06b6d4',
+    value: w.state === 'OFFLINE' ? 0 : w.cpuCores,
+    color: w.state === 'OFFLINE' ? '#334155' : w.state === 'BUSY' ? '#f59e0b' : '#06b6d4',
   }));
 
   const memContrib = workers.map(w => ({
     name: w.hostname,
-    value: w.status === 'OFFLINE' ? 0 : w.memory.totalGb,
-    color: w.status === 'OFFLINE' ? '#334155' : '#8b5cf6',
+    value: w.state === 'OFFLINE' ? 0 : Math.round(w.memoryRamMb / 1024),
+    color: w.state === 'OFFLINE' ? '#334155' : '#8b5cf6',
   }));
 
   return (
@@ -130,24 +130,24 @@ export default function Observability() {
           {/* Workers */}
           <div className="grid grid-cols-3 gap-4 w-full max-w-xl -mt-2">
             {workers.map(w => {
-              const offline = w.status === 'OFFLINE';
+              const offline = w.state === 'OFFLINE';
               return (
                 <div key={w.id} className={`rounded-xl border px-4 py-3 text-center transition-all ${
                   offline
                     ? 'border-slate-800 bg-surface-800 opacity-50'
-                    : w.status === 'BUSY'
+                    : w.state === 'BUSY'
                     ? 'border-amber-500/30 bg-amber-500/5'
                     : 'border-slate-700 bg-surface-800 hover:border-slate-600'
                 }`}>
                   <div className="flex items-center justify-center gap-1.5 mb-2">
                     <span className={`w-1.5 h-1.5 rounded-full ${
-                      offline ? 'bg-slate-600' : w.status === 'BUSY' ? 'bg-amber-400 animate-pulse' : 'bg-green-400 animate-pulse'
+                      offline ? 'bg-slate-600' : w.state === 'BUSY' ? 'bg-amber-400 animate-pulse' : 'bg-green-400 animate-pulse'
                     }`} />
                     <p className="text-xs font-bold text-slate-200">{w.hostname}</p>
                   </div>
-                  <p className="text-[11px] text-slate-400">{offline ? '—' : `${w.cpu.cores} CPU`}</p>
-                  <p className="text-[11px] text-slate-400">{offline ? '—' : `${w.memory.totalGb} GB`}</p>
-                  <p className="text-[11px] text-slate-600">{w.gpu ? w.gpu.model.replace('NVIDIA ', '') : 'No GPU'}</p>
+                  <p className="text-[11px] text-slate-400">{offline ? '—' : `${w.cpuCores} CPU`}</p>
+                  <p className="text-[11px] text-slate-400">{offline ? '—' : `${Math.round(w.memoryRamMb / 1024)} GB`}</p>
+                  <p className="text-[11px] text-slate-600">{w.gpuCount > 0 ? `${w.gpuCount} GPUs` : 'No GPU'}</p>
                   {offline && <p className="text-[10px] text-red-400 mt-1">Offline</p>}
                 </div>
               );
@@ -215,27 +215,23 @@ export default function Observability() {
           {workers.map(w => (
             <div key={w.id} className="flex items-center gap-4 p-3 rounded-lg bg-surface-800 border border-slate-800">
               <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{
-                backgroundColor: w.status === 'OFFLINE' ? '#334155' : w.gpu ? '#10b981' : '#334155'
+                backgroundColor: w.state === 'OFFLINE' ? '#334155' : w.gpuCount > 0 ? '#10b981' : '#334155'
               }} />
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-200">{w.hostname}</p>
-                <p className="text-xs text-slate-500">{w.gpu ? w.gpu.model : 'No GPU'}</p>
+                <p className="text-xs text-slate-500">{w.gpuCount > 0 ? `${w.gpuCount} GPUs` : 'No GPU'}</p>
               </div>
-              {w.gpu && (
+              {w.gpuCount > 0 && (
                 <>
                   <div className="text-right">
-                    <p className="text-xs text-slate-500">VRAM</p>
-                    <p className="text-sm font-semibold text-slate-300">{w.gpu.vramGb} GB</p>
-                  </div>
-                  <div className="text-right">
                     <p className="text-xs text-slate-500">Usage</p>
-                    <p className={`text-sm font-semibold ${w.status === 'OFFLINE' ? 'text-slate-600' : 'text-emerald-400'}`}>
-                      {w.status === 'OFFLINE' ? '—' : `${w.gpu.usagePercent}%`}
+                    <p className={`text-sm font-semibold ${w.state === 'OFFLINE' ? 'text-slate-600' : 'text-emerald-400'}`}>
+                      {w.state === 'OFFLINE' ? '—' : 'Active'}
                     </p>
                   </div>
                 </>
               )}
-              {!w.gpu && <p className="text-xs text-slate-600">Not equipped</p>}
+              {w.gpuCount === 0 && <p className="text-xs text-slate-600">Not equipped</p>}
             </div>
           ))}
         </div>

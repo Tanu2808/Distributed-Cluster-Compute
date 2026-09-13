@@ -10,7 +10,14 @@ const config: Record<WorkerStatus, { label: string; classes: string }> = {
   BUSY:        { label: 'Busy',        classes: 'bg-amber-500/15 text-amber-400 border-amber-500/30' },
   OFFLINE:     { label: 'Offline',     classes: 'bg-slate-700/50 text-slate-400 border-slate-600/30' },
   UNHEALTHY:   { label: 'Unhealthy',   classes: 'bg-red-500/15 text-red-400 border-red-500/30' },
-  REGISTERING: { label: 'Registering', classes: 'bg-blue-500/15 text-blue-400 border-blue-500/30' },
+  REGISTERING: {
+    label: 'Registering',
+    classes: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+  },
+  HEARTBEAT_TIMEOUT: {
+    label: 'Timeout',
+    classes: 'bg-red-500/10 text-red-400 border-red-500/20'
+  }
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {

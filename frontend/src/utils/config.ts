@@ -16,4 +16,10 @@ export const config = {
    * Set to 0 to disable polling entirely. Defaults to 0 (disabled).
    */
   REST_POLL_INTERVAL_MS: parseInt(import.meta.env.VITE_REST_POLL_INTERVAL_MS || '0', 10),
+
+  /** API Username for Basic Auth */
+  API_USERNAME: (import.meta.env.VITE_API_USERNAME as string) || 'admin',
+
+  /** API Password for Basic Auth */
+  API_PASSWORD: (import.meta.env.VITE_API_PASSWORD as string) || 'admin_secret',
 } as const;

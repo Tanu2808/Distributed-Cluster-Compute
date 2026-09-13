@@ -29,12 +29,12 @@ function MeterRow({
 }
 
 export function WorkerCard({ worker, onClick }: WorkerCardProps) {
-  const isOffline = worker.status === 'OFFLINE';
+  const isOffline = worker.state === 'OFFLINE';
   const hbAge = Math.round((Date.now() - new Date(worker.lastHeartbeat).getTime()) / 1000);
 
-  const cpuPct = worker.cpu.usagePercent;
-  const memPct = worker.memory.usagePercent;
-  const storagePct = worker.storage.usagePercent;
+  const cpuPct = worker.cpuUsagePercent;
+  const memPct = worker.memoryUsagePercent;
+  const storagePct = 0; // Not currently tracked in metrics
 
   return (
     <div
@@ -47,11 +47,11 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
           <h3 className="text-base font-bold text-slate-100">{worker.hostname}</h3>
           <p className="text-xs text-slate-500 font-mono mt-0.5">{worker.ipAddress}</p>
         </div>
-        <StatusBadge status={worker.status} />
+        <StatusBadge status={worker.state} />
       </div>
 
       {/* OS + arch */}
-      <p className="text-[11px] text-slate-600 mb-4 truncate">{worker.os} · {worker.architecture}</p>
+      <p className="text-[11px] text-slate-600 mb-4 truncate">{worker.operatingSystem} · {worker.architecture}</p>
 
       {/* Meters */}
       {isOffline ? (
@@ -64,21 +64,21 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
           <MeterRow
             icon={<Cpu size={11} />}
             label="CPU"
-            value={`${cpuPct}% · ${worker.cpu.cores} cores`}
+            value={`${cpuPct.toFixed(1)}% · ${worker.cpuCores} cores`}
             pct={cpuPct}
             colorClass={cpuPct > 85 ? 'bg-red-500' : cpuPct > 60 ? 'bg-amber-500' : 'bg-cyan-500'}
           />
           <MeterRow
             icon={<MemoryStick size={11} />}
             label="RAM"
-            value={`${worker.memory.usedGb}/${worker.memory.totalGb} GB`}
+            value={`${(worker.memoryRamMb / 1024).toFixed(1)} GB`}
             pct={memPct}
             colorClass={memPct > 85 ? 'bg-red-500' : 'bg-violet-500'}
           />
           <MeterRow
             icon={<HardDrive size={11} />}
             label="Storage"
-            value={`${worker.storage.usedTb.toFixed(1)}/${worker.storage.totalTb} TB`}
+            value={`${(worker.storageMb / 1024).toFixed(1)} GB`}
             pct={storagePct}
             colorClass="bg-amber-500"
           />
@@ -90,7 +90,7 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
         <div>
           <p className="text-[10px] text-slate-600 mb-0.5">GPU</p>
           <p className="text-xs text-slate-400 truncate">
-            {worker.gpu ? worker.gpu.model.replace('NVIDIA ', '') : 'None'}
+            {worker.gpuCount > 0 ? `${worker.gpuCount} GPUs` : 'None'}
           </p>
         </div>
         <div>
@@ -106,7 +106,7 @@ export function WorkerCard({ worker, onClick }: WorkerCardProps) {
         <div>
           <p className="text-[10px] text-slate-600 mb-0.5">Network</p>
           <p className="text-xs text-slate-400">
-            {isOffline ? '—' : `↓ ${worker.network.inboundMbps} Mbps`}
+            {isOffline ? '—' : `↓ ${Math.round(worker.networkBps / 1_000_000)} Mbps`}
           </p>
         </div>
       </div>

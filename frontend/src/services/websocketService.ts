@@ -82,7 +82,10 @@ class WebSocketService {
     this._setStatus(this.reconnectAttempts === 0 ? 'CONNECTING' : 'RECONNECTING');
 
     try {
-      this.ws = new WebSocket(config.WS_URL);
+      // Pass credentials via Sec-WebSocket-Protocol to avoid exposing them in URL query params
+      // The backend will extract and validate them during the handshake.
+      const authString = btoa(`${config.API_USERNAME}:${config.API_PASSWORD}`);
+      this.ws = new WebSocket(config.WS_URL, ['basic', authString]);
     } catch (err) {
       console.error('[WS] Failed to create WebSocket:', err);
       this._scheduleReconnect();

@@ -57,7 +57,7 @@ export function WorkerDetailModal({ worker, onClose }: WorkerDetailModalProps) {
 
   if (!worker) return null;
 
-  const isOffline = worker.status === 'OFFLINE';
+  const isOffline = worker.state === 'OFFLINE';
   const hbAgeSeconds = Math.round((Date.now() - new Date(worker.lastHeartbeat).getTime()) / 1000);
   const connectedAgeMs = Date.now() - new Date(worker.connectedSince).getTime();
   const connectedHours = Math.floor(connectedAgeMs / (1000 * 60 * 60));
@@ -101,7 +101,7 @@ export function WorkerDetailModal({ worker, onClose }: WorkerDetailModalProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <StatusBadge status={worker.status} />
+            <StatusBadge status={worker.state} />
             <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors">
               <X size={18} />
             </button>
@@ -113,7 +113,7 @@ export function WorkerDetailModal({ worker, onClose }: WorkerDetailModalProps) {
           <SectionTitle icon={<Wifi size={14} />} label="Connection" />
           <div className="card p-4">
             <InfoRow label="IP Address" value={worker.ipAddress} mono />
-            <InfoRow label="Status" value={worker.status} />
+            <InfoRow label="Status" value={worker.state} />
             <InfoRow
               label="Last Heartbeat"
               value={isOffline ? `${Math.round(hbAgeSeconds / 60)} min ago` : `${hbAgeSeconds}s ago`}
@@ -127,13 +127,11 @@ export function WorkerDetailModal({ worker, onClose }: WorkerDetailModalProps) {
           {/* Hardware Info */}
           <SectionTitle icon={<Cpu size={14} />} label="Hardware" />
           <div className="card p-4">
-            <InfoRow label="CPU Model" value={worker.cpu.model} />
-            <InfoRow label="CPU Cores / Threads" value={`${worker.cpu.cores} cores / ${worker.cpu.threads} threads`} />
-            <InfoRow label="Total RAM" value={`${worker.memory.totalGb} GB`} />
-            <InfoRow label="GPU" value={worker.gpu ? worker.gpu.model : 'Not Available'} />
-            {worker.gpu && <InfoRow label="VRAM" value={`${worker.gpu.vramGb} GB`} />}
-            <InfoRow label="Storage" value={`${worker.storage.totalTb} TB`} />
-            <InfoRow label="OS" value={worker.os} />
+            <InfoRow label="CPU Cores" value={`${worker.cpuCores} cores`} />
+            <InfoRow label="Total RAM" value={`${Math.round(worker.memoryRamMb / 1024)} GB`} />
+            <InfoRow label="GPUs" value={worker.gpuCount > 0 ? `${worker.gpuCount} GPUs` : 'Not Available'} />
+            <InfoRow label="Storage" value={`${(worker.storageMb / 1024 / 1024).toFixed(1)} TB`} />
+            <InfoRow label="OS" value={worker.operatingSystem} />
             <InfoRow label="Architecture" value={worker.architecture} mono />
           </div>
 
@@ -149,43 +147,23 @@ export function WorkerDetailModal({ worker, onClose }: WorkerDetailModalProps) {
               <SectionTitle icon={<Activity size={14} />} label="Current Utilization" />
               <div className="card p-4">
                 <MeterBar
-                  label={`CPU — ${worker.cpu.usagePercent}% (${Math.round(worker.cpu.cores * worker.cpu.usagePercent / 100)}/${worker.cpu.cores} cores)`}
-                  value={worker.cpu.usagePercent} max={100}
-                  color={worker.cpu.usagePercent > 85 ? 'bg-red-500' : 'bg-cyan-500'}
+                  label={`CPU — ${worker.cpuUsagePercent}% (${Math.round(worker.cpuCores * worker.cpuUsagePercent / 100)}/${worker.cpuCores} cores)`}
+                  value={worker.cpuUsagePercent} max={100}
+                  color={worker.cpuUsagePercent > 85 ? 'bg-red-500' : 'bg-cyan-500'}
                 />
                 <MeterBar
-                  label={`Memory — ${worker.memory.usedGb}/${worker.memory.totalGb} GB`}
-                  value={worker.memory.usedGb} max={worker.memory.totalGb}
-                  color={worker.memory.usagePercent > 85 ? 'bg-red-500' : 'bg-violet-500'}
-                />
-                {worker.gpu && (
-                  <MeterBar
-                    label={`GPU — ${worker.gpu.usagePercent}% (${worker.gpu.model.replace('NVIDIA ', '')})`}
-                    value={worker.gpu.usagePercent} max={100}
-                    color="bg-emerald-500"
-                  />
-                )}
-                <MeterBar
-                  label={`Storage — ${worker.storage.usedTb.toFixed(1)}/${worker.storage.totalTb} TB`}
-                  value={worker.storage.usedTb} max={worker.storage.totalTb}
-                  color="bg-amber-500"
+                  label={`Memory — ${Math.round(worker.memoryRamMb * worker.memoryUsagePercent / 100000)}/${Math.round(worker.memoryRamMb / 1024)} GB`}
+                  value={worker.memoryUsagePercent} max={100}
+                  color={worker.memoryUsagePercent > 85 ? 'bg-red-500' : 'bg-violet-500'}
                 />
                 <div className="mt-3 pt-3 border-t border-slate-800 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Network In</p>
-                    <p className="text-sm font-semibold text-slate-200">{worker.network.inboundMbps} Mbps</p>
+                    <p className="text-xs text-slate-500 mb-1">Network Throughput</p>
+                    <p className="text-sm font-semibold text-slate-200">{Math.round(worker.networkBps / 1_000_000)} Mbps</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Network Out</p>
-                    <p className="text-sm font-semibold text-slate-200">{worker.network.outboundMbps} Mbps</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Latency</p>
-                    <p className="text-sm font-semibold text-slate-200">{worker.network.latencyMs} ms</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Available Cores</p>
-                    <p className="text-sm font-semibold text-slate-200">{worker.cpu.availableCores}</p>
+                    <p className="text-xs text-slate-500 mb-1">Active Tasks</p>
+                    <p className="text-sm font-semibold text-slate-200">{worker.activeTasks}</p>
                   </div>
                 </div>
               </div>

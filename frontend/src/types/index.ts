@@ -1,6 +1,6 @@
 // ─── Worker / Node Types ───────────────────────────────────────────────────
 
-export type WorkerStatus = 'ONLINE' | 'BUSY' | 'OFFLINE' | 'UNHEALTHY' | 'REGISTERING';
+export type WorkerStatus = 'ONLINE' | 'BUSY' | 'OFFLINE' | 'UNHEALTHY' | 'REGISTERING' | 'HEARTBEAT_TIMEOUT';
 
 export interface CpuInfo {
   model: string;
@@ -38,19 +38,25 @@ export interface NetworkInfo {
 
 export interface Worker {
   id: string;
+  name: string;
   hostname: string;
   ipAddress: string;
-  status: WorkerStatus;
-  cpu: CpuInfo;
-  memory: MemoryInfo;
-  gpu: GpuInfo | null;
-  storage: StorageInfo;
-  network: NetworkInfo;
-  lastHeartbeat: string; // ISO timestamp
-  os: string;
+  operatingSystem: string;
   architecture: string;
   agentVersion: string;
-  connectedSince: string; // ISO timestamp
+  state: WorkerStatus;
+  lastHeartbeat: string;
+  connectedSince: string;
+  
+  cpuCores: number;
+  memoryRamMb: number;
+  gpuCount: number;
+  storageMb: number;
+  networkBps: number;
+
+  cpuUsagePercent: number;
+  memoryUsagePercent: number;
+  activeTasks: number;
 }
 
 // ─── Cluster / Aggregated Types ─────────────────────────────────────────────

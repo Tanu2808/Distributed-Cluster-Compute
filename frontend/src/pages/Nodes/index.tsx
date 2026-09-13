@@ -8,7 +8,7 @@ import { ErrorBanner } from '../../components/feedback/ErrorBanner';
 import { useWorkers } from '../../hooks/useWorkers';
 import type { Worker, WorkerStatus } from '../../types';
 
-const ALL_STATUSES: WorkerStatus[] = ['ONLINE', 'BUSY', 'OFFLINE', 'UNHEALTHY', 'REGISTERING'];
+const ALL_STATUSES: WorkerStatus[] = ['ONLINE', 'BUSY', 'OFFLINE', 'UNHEALTHY', 'REGISTERING', 'HEARTBEAT_TIMEOUT'];
 
 export default function Nodes() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
@@ -23,12 +23,12 @@ export default function Nodes() {
       w.hostname.toLowerCase().includes(search.toLowerCase()) ||
       w.ipAddress.includes(search) ||
       w.id.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = filterStatus === 'ALL' || w.status === filterStatus;
+    const matchesStatus = filterStatus === 'ALL' || w.state === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
   const counts = ALL_STATUSES.reduce((acc, s) => {
-    acc[s] = workers.filter(w => w.status === s).length;
+    acc[s] = workers.filter(w => w.state === s).length;
     return acc;
   }, {} as Record<WorkerStatus, number>);
 

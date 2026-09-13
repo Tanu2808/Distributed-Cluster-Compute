@@ -35,9 +35,9 @@ export function WorkerTable({ workers, onWorkerClick }: WorkerTableProps) {
   const sorted = [...workers].sort((a, b) => {
     let aVal: any, bVal: any;
     if (sortKey === 'hostname') { aVal = a.hostname; bVal = b.hostname; }
-    else if (sortKey === 'status') { aVal = a.status; bVal = b.status; }
-    else if (sortKey === 'cpu') { aVal = a.cpu.usagePercent; bVal = b.cpu.usagePercent; }
-    else { aVal = a.memory.usagePercent; bVal = b.memory.usagePercent; }
+    else if (sortKey === 'status') { aVal = a.state; bVal = b.state; }
+    else if (sortKey === 'cpu') { aVal = a.cpuUsagePercent; bVal = b.cpuUsagePercent; }
+    else { aVal = a.memoryUsagePercent; bVal = b.memoryUsagePercent; }
     if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
     if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
     return 0;
@@ -78,7 +78,7 @@ export function WorkerTable({ workers, onWorkerClick }: WorkerTableProps) {
         </thead>
         <tbody>
           {sorted.map(worker => {
-            const isOffline = worker.status === 'OFFLINE';
+            const isOffline = worker.state === 'OFFLINE';
             const hbAge = Math.round((Date.now() - new Date(worker.lastHeartbeat).getTime()) / 1000);
             return (
               <tr
@@ -93,7 +93,7 @@ export function WorkerTable({ workers, onWorkerClick }: WorkerTableProps) {
                   </div>
                 </td>
                 <td className="py-3 px-4">
-                  <StatusBadge status={worker.status} />
+                  <StatusBadge status={worker.state} />
                 </td>
                 <td className="py-3 px-4">
                   {isOffline ? (
@@ -101,12 +101,12 @@ export function WorkerTable({ workers, onWorkerClick }: WorkerTableProps) {
                   ) : (
                     <div>
                       <p className="text-xs text-slate-400 mb-1">
-                        {Math.round(worker.cpu.cores * worker.cpu.usagePercent / 100)}/{worker.cpu.cores} cores
+                        {Math.round(worker.cpuCores * worker.cpuUsagePercent / 100)}/{worker.cpuCores} cores
                       </p>
                       <MiniBar
-                        value={worker.cpu.usagePercent}
+                        value={worker.cpuUsagePercent}
                         max={100}
-                        color={worker.cpu.usagePercent > 85 ? 'bg-red-500' : worker.cpu.usagePercent > 60 ? 'bg-amber-500' : 'bg-cyan-500'}
+                        color={worker.cpuUsagePercent > 85 ? 'bg-red-500' : worker.cpuUsagePercent > 60 ? 'bg-amber-500' : 'bg-cyan-500'}
                       />
                     </div>
                   )}
@@ -117,19 +117,19 @@ export function WorkerTable({ workers, onWorkerClick }: WorkerTableProps) {
                   ) : (
                     <div>
                       <p className="text-xs text-slate-400 mb-1">
-                        {worker.memory.usedGb}/{worker.memory.totalGb} GB
+                        {Math.round(worker.memoryRamMb * worker.memoryUsagePercent / 100000)}/{Math.round(worker.memoryRamMb / 1024)} GB
                       </p>
                       <MiniBar
-                        value={worker.memory.usagePercent}
+                        value={worker.memoryUsagePercent}
                         max={100}
-                        color={worker.memory.usagePercent > 85 ? 'bg-red-500' : worker.memory.usagePercent > 60 ? 'bg-amber-500' : 'bg-violet-500'}
+                        color={worker.memoryUsagePercent > 85 ? 'bg-red-500' : worker.memoryUsagePercent > 60 ? 'bg-amber-500' : 'bg-violet-500'}
                       />
                     </div>
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  {worker.gpu ? (
-                    <span className="text-xs text-slate-300">{worker.gpu.model.replace('NVIDIA ', '')}</span>
+                  {worker.gpuCount > 0 ? (
+                    <span className="text-xs text-slate-300">{worker.gpuCount} GPUs</span>
                   ) : (
                     <span className="text-xs text-slate-600">None</span>
                   )}

@@ -8,6 +8,20 @@ function buildUrl(path: string): string {
   return `${config.API_BASE_URL}${path}`;
 }
 
+function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+
+  if (!config.USE_MOCK_API && config.API_USERNAME && config.API_PASSWORD) {
+    const credentials = btoa(`${config.API_USERNAME}:${config.API_PASSWORD}`);
+    headers.Authorization = `Basic ${credentials}`;
+  }
+
+  return headers;
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let message = `HTTP ${response.status}: ${response.statusText}`;
@@ -23,29 +37,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-/**
- * Typed GET request.
- * Throws ApiError on non-2xx responses.
- */
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(buildUrl(path), {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: getHeaders(),
   });
   return handleResponse<T>(response);
 }
 
-/**
- * Typed PUT request with JSON body.
- * Throws ApiError on non-2xx responses.
- */
 export async function apiPut<TBody, TResponse = TBody>(
   path: string,
   body: TBody,
 ): Promise<TResponse> {
   const response = await fetch(buildUrl(path), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(body),
   });
   return handleResponse<TResponse>(response);
