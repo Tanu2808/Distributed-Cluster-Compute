@@ -78,7 +78,7 @@ public class WebSocketConnectionManager {
                 onConnectCallback.accept(this.stompSession);
             }
         } catch (Exception e) {
-            log.error("Failed to connect to WebSocket: {}", e.getMessage());
+            log.error("Failed to connect to WebSocket: {}", e.getMessage(), e);
             handleDisconnect();
         }
     }

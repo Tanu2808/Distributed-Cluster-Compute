@@ -1,6 +1,7 @@
 package com.cluster.coordinator.service;
 
 import com.cluster.coordinator.dto.WorkerHeartbeatRequest;
+import com.cluster.coordinator.dto.WsMessageDto;
 import com.cluster.coordinator.model.Worker;
 import com.cluster.coordinator.model.WorkerHeartbeat;
 import com.cluster.coordinator.model.WorkerState;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.cluster.coordinator.websocket.ClusterWebSocketHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,16 +25,19 @@ public class HeartbeatService {
     private final WorkerRepository workerRepository;
     private final WorkerHeartbeatRepository workerHeartbeatRepository;
     private final EventService eventService;
+    private final ClusterWebSocketHandler webSocketHandler;
 
     @Value("${cluster.heartbeat.timeout-seconds:30}")
     private int heartbeatTimeoutSeconds;
 
     public HeartbeatService(WorkerRepository workerRepository,
                             WorkerHeartbeatRepository workerHeartbeatRepository,
-                            EventService eventService) {
+                            EventService eventService,
+                            ClusterWebSocketHandler webSocketHandler) {
         this.workerRepository = workerRepository;
         this.workerHeartbeatRepository = workerHeartbeatRepository;
         this.eventService = eventService;
+        this.webSocketHandler = webSocketHandler;
     }
 
     @Transactional
@@ -52,6 +57,8 @@ public class HeartbeatService {
         WorkerHeartbeat heartbeat = new WorkerHeartbeat(workerId, request.getCpuUsagePercent(),
                 request.getMemoryUsagePercent(), request.getActiveTasks());
         workerHeartbeatRepository.save(heartbeat);
+        
+        webSocketHandler.broadcast(new WsMessageDto<>("HEARTBEAT_UPDATE", workerId));
     }
 
     @Scheduled(fixedRateString = "${cluster.heartbeat.check-interval-ms:10000}")
@@ -66,6 +73,7 @@ public class HeartbeatService {
                 workerRepository.save(worker);
                 eventService.recordEvent("WORKER_TIMEOUT", "Worker heartbeat timed out", worker.getId());
                 log.warn("Worker heartbeat timed out: {}", worker.getId());
+                webSocketHandler.broadcast(new WsMessageDto<>("WORKER_DISCONNECTED", worker.getId()));
             }
         }
     }

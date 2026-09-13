@@ -37,7 +37,7 @@ The platform consists of three primary layers communicating over real-time persi
 - ✅ **Internal Communication (WebSocket)**: Both Coordinator and Worker use persistent STOMP WebSockets for bidirectional communication.
 - ✅ **Strict Type Safety**: Standardized protocol (`MessageEnvelope`, `HeartbeatMessage`, etc.) ensures type safety across the network.
 - ✅ **Authentication**: WebSocket endpoints are secured via Basic Auth (`api-key`).
-- ⏳ **Backend-to-Frontend Push**: Currently pending implementation for real-time frontend WebSocket (`/ws/cluster`).
+- ✅ **Backend-to-Frontend Push**: Real-time frontend WebSocket (`/ws/cluster`) broadcasts live cluster and worker updates.
 - ⏳ **Task Orchestration**: Initial protocol models for executing distributed tasks are built, but the task engine itself is pending.
 
 ## How to Configure Connection

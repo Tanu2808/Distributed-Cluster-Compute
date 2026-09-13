@@ -2,6 +2,7 @@ package com.cluster.coordinator.controller;
 
 import com.cluster.coordinator.dto.WorkerHeartbeatRequest;
 import com.cluster.coordinator.dto.WorkerRegistrationRequest;
+import com.cluster.coordinator.dto.WorkerResponseDto;
 import com.cluster.coordinator.model.Worker;
 import com.cluster.coordinator.service.HeartbeatService;
 import com.cluster.coordinator.service.WorkerService;
@@ -24,13 +25,13 @@ public class WorkerController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Worker>> getAllWorkers() {
-        return ResponseEntity.ok(workerService.getAllWorkers());
+    public ResponseEntity<List<WorkerResponseDto>> getAllWorkers() {
+        return ResponseEntity.ok(workerService.getAllWorkerDtos());
     }
 
     @GetMapping("/{workerId}")
-    public ResponseEntity<Worker> getWorker(@PathVariable String workerId) {
-        return workerService.getWorker(workerId)
+    public ResponseEntity<WorkerResponseDto> getWorker(@PathVariable String workerId) {
+        return workerService.getWorkerDto(workerId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
