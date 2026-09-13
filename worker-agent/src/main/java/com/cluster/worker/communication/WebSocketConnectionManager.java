@@ -54,6 +54,10 @@ public class WebSocketConnectionManager {
         this.onDisconnectCallback = onDisconnectCallback;
     }
 
+    public boolean isConnected() {
+        return stompSession != null && stompSession.isConnected();
+    }
+
     public void connect() {
         if (stompSession != null && stompSession.isConnected()) {
             return;

@@ -1,7 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Server, Settings, Home, HardDrive, List, Link } from 'lucide-react'
+import { useWorkerStatus } from '../hooks/useWorkerStatus'
 
 export default function Layout() {
+  const { status, info } = useWorkerStatus(3000);
   const navItems = [
     { to: '/home', icon: Home, label: 'Overview' },
     { to: '/setup', icon: Server, label: 'Setup' },
@@ -42,9 +44,17 @@ export default function Layout() {
         <div className="p-4 border-t border-worker-border">
           <div className="flex items-center justify-between text-xs text-worker-muted">
             <span>Status:</span>
-            <span className="flex items-center text-worker-primary">
-              <span className="w-2 h-2 rounded-full bg-worker-primary mr-1.5 animate-pulse"></span>
-              Online
+            <span className={`flex items-center font-medium ${
+                status?.status === 'ONLINE' ? 'text-worker-primary' :
+                status?.status === 'STARTING' || status?.status === 'REGISTERING' ? 'text-yellow-500' :
+                'text-red-500'
+            }`}>
+              <span className={`w-2 h-2 rounded-full mr-1.5 ${
+                status?.status === 'ONLINE' ? 'bg-worker-primary animate-pulse' :
+                status?.status === 'STARTING' || status?.status === 'REGISTERING' ? 'bg-yellow-500 animate-pulse' :
+                'bg-red-500'
+              }`}></span>
+              {status?.status || 'UNKNOWN'}
             </span>
           </div>
           <div className="mt-2 text-[10px] text-center opacity-50">
@@ -56,8 +66,8 @@ export default function Layout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-worker-card/50 backdrop-blur border-b border-worker-border flex items-center justify-end px-6">
-           <div className="px-3 py-1 bg-worker-border rounded text-xs font-medium text-worker-muted">
-             localhost:8081
+           <div className="px-3 py-1 bg-worker-border rounded text-xs font-medium text-worker-muted font-mono">
+             ID: {info?.workerId || 'Loading...'}
            </div>
         </header>
         <div className="flex-1 overflow-auto p-8">
