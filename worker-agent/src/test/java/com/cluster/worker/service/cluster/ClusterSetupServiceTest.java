@@ -3,6 +3,10 @@ package com.cluster.worker.service.cluster;
 import com.cluster.worker.model.cluster.ClusterConfiguration;
 import com.cluster.worker.model.cluster.ClusterEnrollment;
 import com.cluster.worker.model.cluster.JoinCode;
+import com.cluster.worker.persistence.WorkerConfiguration;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
+import com.cluster.worker.model.WorkerLifecycleState;
+import com.cluster.worker.service.WorkerStateManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,11 +25,17 @@ class ClusterSetupServiceTest {
     @Mock
     private CoordinatorConnectionResolver connectionResolver;
 
+    @Mock
+    private WorkerConfigurationStore configStore;
+
+    @Mock
+    private WorkerStateManager stateManager;
+
     private ClusterSetupService setupService;
 
     @BeforeEach
     void setUp() {
-        setupService = new ClusterSetupService(provisioningService, connectionResolver);
+        setupService = new ClusterSetupService(provisioningService, connectionResolver, configStore, stateManager);
     }
 
     @Test
@@ -40,12 +50,15 @@ class ClusterSetupServiceTest {
     @Test
     void testCreateClusterLocalSuccess() {
         when(provisioningService.provisionLocalCoordinator("test-cluster")).thenReturn(true);
-        when(connectionResolver.resolveLocalCoordinator("test-cluster")).thenReturn(null);
-        
+        when(connectionResolver.resolveLocalCoordinator("test-cluster")).thenReturn(new com.cluster.worker.model.cluster.ClusterConnectionInfo("http://localhost:8080", null));
+        when(configStore.getConfig()).thenReturn(new WorkerConfiguration("worker-1"));
+
         ClusterConfiguration config = setupService.createCluster("test-cluster", true);
         
         assertEquals("test-cluster", config.getClusterName());
         verify(provisioningService, times(1)).provisionLocalCoordinator("test-cluster");
+        verify(configStore, times(1)).save();
+        verify(stateManager, times(1)).transitionLifecycle(WorkerLifecycleState.CONFIGURED);
     }
 
     @Test

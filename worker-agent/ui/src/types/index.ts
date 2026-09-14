@@ -17,9 +17,14 @@ export interface ActiveTasksResponse {
   tasks: unknown[];
 }
 
-export interface SettingsResponse {
-  workerName: string;
+export interface WorkerSettingsResponse {
+  workerId: string;
+  version: number;
+}
+
+export interface ClusterSettingsResponse {
+  clusterId: string;
+  clusterName: string;
   coordinatorUrl: string;
-  heartbeatIntervalMs: number;
-  metricsIntervalMs: number;
+  isConfigured: boolean;
 }

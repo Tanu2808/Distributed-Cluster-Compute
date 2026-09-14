@@ -6,6 +6,7 @@ import com.cluster.shared.protocol.RegisterMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
 import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
@@ -36,6 +37,7 @@ public class WorkerLifecycleService {
     private final SystemMetricsProvider metricsProvider;
     private final WorkerConfig config;
     private final WorkerStateManager stateManager;
+    private final WorkerConfigurationStore configStore;
     private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
 
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -44,12 +46,14 @@ public class WorkerLifecycleService {
                                   WorkerIdentityGenerator identityGenerator,
                                   SystemMetricsProvider metricsProvider,
                                   WorkerConfig config,
-                                  WorkerStateManager stateManager) {
+                                  WorkerStateManager stateManager,
+                                  WorkerConfigurationStore configStore) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.config = config;
         this.stateManager = stateManager;
+        this.configStore = configStore;
         
         this.connectionManager.setCallbacks(this::onConnected, this::onDisconnected);
     }
@@ -59,7 +63,7 @@ public class WorkerLifecycleService {
         if (stateManager.getLifecycleState() == WorkerLifecycleState.STARTING) {
             stateManager.transitionLifecycle(WorkerLifecycleState.INITIALIZING);
             
-            if (!config.getCluster().isConfigured()) {
+            if (!configStore.isConfigured()) {
                 stateManager.transitionLifecycle(WorkerLifecycleState.SETUP_REQUIRED);
                 System.out.println("Worker is not configured. Entering SETUP_REQUIRED state.");
                 return;

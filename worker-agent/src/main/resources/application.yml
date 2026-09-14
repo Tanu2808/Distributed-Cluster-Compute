@@ -2,8 +2,6 @@ server:
   port: 8081
 
 worker:
-  cluster:
-    configured: ${CLUSTER_CONFIGURED:false}
   name: ${HOSTNAME:local-worker}
   coordinator:
     url: ${COORDINATOR_URL:http://localhost:8080}

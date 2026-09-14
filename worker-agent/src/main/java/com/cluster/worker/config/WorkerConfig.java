@@ -56,8 +56,6 @@ public class WorkerConfig {
     }
 
     public static class Cluster {
-        private boolean configured = false;
-        public boolean isConfigured() { return configured; }
-        public void setConfigured(boolean configured) { this.configured = configured; }
+        // cluster config is now managed by WorkerConfigurationStore
     }
 }

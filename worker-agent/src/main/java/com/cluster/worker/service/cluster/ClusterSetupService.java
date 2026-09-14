@@ -4,6 +4,9 @@ import com.cluster.worker.model.cluster.ClusterConfiguration;
 import com.cluster.worker.model.cluster.ClusterConnectionInfo;
 import com.cluster.worker.model.cluster.ClusterEnrollment;
 import com.cluster.worker.model.cluster.JoinCode;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
+import com.cluster.worker.model.WorkerLifecycleState;
+import com.cluster.worker.service.WorkerStateManager;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,11 +14,17 @@ public class ClusterSetupService {
 
     private final CoordinatorProvisioningService provisioningService;
     private final CoordinatorConnectionResolver connectionResolver;
+    private final WorkerConfigurationStore configStore;
+    private final WorkerStateManager stateManager;
 
     public ClusterSetupService(CoordinatorProvisioningService provisioningService,
-                               CoordinatorConnectionResolver connectionResolver) {
+                               CoordinatorConnectionResolver connectionResolver,
+                               WorkerConfigurationStore configStore,
+                               WorkerStateManager stateManager) {
         this.provisioningService = provisioningService;
         this.connectionResolver = connectionResolver;
+        this.configStore = configStore;
+        this.stateManager = stateManager;
     }
 
     /**
@@ -48,6 +57,19 @@ public class ClusterSetupService {
             // For existing server, we'd typically take an endpoint. For now, it's a placeholder.
             throw new UnsupportedOperationException("Creating a cluster on an existing remote coordinator is not fully supported yet.");
         }
+        
+        // Persist Configuration
+        var storedConfig = configStore.getConfig();
+        storedConfig.setClusterName(clusterName);
+        storedConfig.setClusterId("local-cluster-id"); // In a real scenario, this comes back from the coordinator
+        storedConfig.setCoordinatorUrl(connectionInfo.getUrl());
+        if (connectionInfo.getJoinCode() != null) {
+            storedConfig.setEnrollmentCredential(connectionInfo.getJoinCode().getCode());
+        }
+        configStore.save();
+        
+        // Transition state to kick off the connection flow
+        stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
         
         return new ClusterConfiguration(clusterName, connectionInfo);
     }
