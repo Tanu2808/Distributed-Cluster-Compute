@@ -5,8 +5,9 @@ import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.RegisterMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
+import com.cluster.worker.model.ConnectionState;
 import com.cluster.worker.model.SystemMetrics;
-import com.cluster.worker.model.WorkerState;
+import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -34,7 +35,7 @@ public class WorkerLifecycleService {
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
     private final WorkerConfig config;
-    private WorkerState state = WorkerState.STARTING;
+    private final WorkerStateManager stateManager;
     private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
 
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -42,27 +43,51 @@ public class WorkerLifecycleService {
     public WorkerLifecycleService(WebSocketConnectionManager connectionManager,
                                   WorkerIdentityGenerator identityGenerator,
                                   SystemMetricsProvider metricsProvider,
-                                  WorkerConfig config) {
+                                  WorkerConfig config,
+                                  WorkerStateManager stateManager) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.config = config;
+        this.stateManager = stateManager;
         
         this.connectionManager.setCallbacks(this::onConnected, this::onDisconnected);
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
-        if (state == WorkerState.STARTING || state == WorkerState.DISCONNECTED) {
+        if (stateManager.getLifecycleState() == WorkerLifecycleState.STARTING) {
+            stateManager.transitionLifecycle(WorkerLifecycleState.INITIALIZING);
+            
+            if (!config.getCluster().isConfigured()) {
+                stateManager.transitionLifecycle(WorkerLifecycleState.SETUP_REQUIRED);
+                System.out.println("Worker is not configured. Entering SETUP_REQUIRED state.");
+                return;
+            }
+            
+            stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
+            System.out.println("Worker is configured. Proceeding to connect...");
+            stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+            connectWithBackoff();
+        } else if (stateManager.getConnectionState() == ConnectionState.DISCONNECTED) {
             connectWithBackoff();
         }
     }
 
     private void connectWithBackoff() {
-        if (state == WorkerState.ONLINE) {
+        if (stateManager.getConnectionState() == ConnectionState.ONLINE || stateManager.getConnectionState() == ConnectionState.CONNECTING) {
             return;
         }
-        state = WorkerState.REGISTERING;
+        
+        if (stateManager.getLifecycleState() == WorkerLifecycleState.SETUP_REQUIRED) {
+            return; // don't connect if setup required
+        }
+        
+        if (isReconnecting.get()) {
+            stateManager.transitionConnection(ConnectionState.RECONNECTING);
+        }
+        
+        stateManager.transitionConnection(ConnectionState.CONNECTING);
         System.out.println("Attempting to connect to coordinator...");
         connectionManager.connect();
     }
@@ -70,6 +95,7 @@ public class WorkerLifecycleService {
     private void onConnected(StompSession session) {
         System.out.println("WebSocket connected. Sending REGISTER message...");
         isReconnecting.set(false);
+        stateManager.transitionConnection(ConnectionState.REGISTERING);
         
         String workerId = identityGenerator.getOrCreateWorkerId();
         
@@ -86,15 +112,12 @@ public class WorkerLifecycleService {
                 if (payload instanceof MessageEnvelope) {
                     MessageEnvelope<?> envelope = (MessageEnvelope<?>) payload;
                     if (envelope.getType() == MessageType.REGISTER_ACK) {
-                        state = WorkerState.ONLINE;
+                        stateManager.transitionConnection(ConnectionState.ONLINE);
                         System.out.println("Worker registered successfully and is ONLINE.");
                     }
                 }
             }
         });
-        
-        @SuppressWarnings("unused")
-        WorkerConfig ignoredConfig = config;
         
         RegisterMessage registerMsg = new RegisterMessage();
         
@@ -125,22 +148,22 @@ public class WorkerLifecycleService {
     }
     
     private void onDisconnected() {
-        if (state == WorkerState.STOPPING) {
+        if (stateManager.getLifecycleState() == WorkerLifecycleState.STOPPING) {
             return;
         }
+        
+        if (stateManager.getConnectionState() != ConnectionState.DISCONNECTED) {
+            stateManager.transitionConnection(ConnectionState.DISCONNECTED);
+        }
+        
         if (isReconnecting.compareAndSet(false, true)) {
             System.err.println("Disconnected from coordinator. Reconnecting in 5 seconds...");
-            state = WorkerState.DISCONNECTED;
             executorService.schedule(this::connectWithBackoff, 5, TimeUnit.SECONDS);
         }
     }
 
-    public WorkerState getState() {
-        return state;
-    }
-
-    public void setState(WorkerState state) {
-        this.state = state;
+    public WorkerStateManager getStateManager() {
+        return stateManager;
     }
 
     public void handleDisconnection() {
@@ -150,7 +173,11 @@ public class WorkerLifecycleService {
     @PreDestroy
     public void shutdown() {
         System.out.println("Shutting down worker agent...");
-        this.state = WorkerState.STOPPING;
+        try {
+            this.stateManager.transitionLifecycle(WorkerLifecycleState.STOPPING);
+        } catch (Exception e) {
+            // ignore
+        }
         executorService.shutdown();
     }
 }
