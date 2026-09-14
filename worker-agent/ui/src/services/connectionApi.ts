@@ -1,6 +1,6 @@
 import { fetchApi } from './apiClient';
-import type { ConnectionStatusResponse } from '../types';
+import type { ConnectionDiagnosticsResponse } from '../types';
 
 export const connectionApi = {
-  getStatus: () => fetchApi<ConnectionStatusResponse>('/connection/status'),
+  getStatus: () => fetchApi<ConnectionDiagnosticsResponse>('/worker/connection'),
 };

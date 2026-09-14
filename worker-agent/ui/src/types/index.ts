@@ -9,8 +9,14 @@ export interface WorkerInfoResponse {
   workerId: string;
 }
 
-export interface ConnectionStatusResponse {
-  connected: boolean;
+export interface ConnectionDiagnosticsResponse {
+  connectionState: string;
+  coordinatorUrl: string;
+  connectedSince: string | null;
+  lastSuccessfulHeartbeat: string | null;
+  lastMessageTimestamp: string | null;
+  reconnectCount: number;
+  lastConnectionError: string | null;
 }
 
 export interface ActiveTasksResponse {

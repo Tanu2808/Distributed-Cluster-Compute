@@ -134,10 +134,17 @@ public class WorkerLifecycleService {
         
         registerMsg.setOsName(System.getProperty("os.name"));
         registerMsg.setOsVersion(System.getProperty("os.version"));
+        registerMsg.setArchitecture(System.getProperty("os.arch"));
+        registerMsg.setAgentVersion("0.0.1-SNAPSHOT");
         
         SystemMetrics currentMetrics = metricsProvider.collectMetrics();
         registerMsg.setCpuCores(currentMetrics.getCpuCores());
         registerMsg.setMemoryMb(currentMetrics.getTotalMemoryMb());
+        
+        // Include basic static information as part of registration
+        registerMsg.setCpuInfo(currentMetrics.getCpuCores() + " Cores");
+        registerMsg.setGpuInfo(currentMetrics.getGpuCount() + " GPUs");
+        registerMsg.setStorageInfo(currentMetrics.getTotalStorageMb() + " MB Total Storage");
         
         registerMsg.setTags(new HashMap<>()); // dummy for now
 
@@ -161,8 +168,10 @@ public class WorkerLifecycleService {
         }
         
         if (isReconnecting.compareAndSet(false, true)) {
-            System.err.println("Disconnected from coordinator. Reconnecting in 5 seconds...");
-            executorService.schedule(this::connectWithBackoff, 5, TimeUnit.SECONDS);
+            int attempts = connectionManager.getReconnectCount();
+            long delay = Math.min(60, 5L * (1L << Math.min(attempts, 4))); // 5, 10, 20, 40, 60...
+            System.err.println("Disconnected from coordinator. Reconnecting in " + delay + " seconds...");
+            executorService.schedule(this::connectWithBackoff, delay, TimeUnit.SECONDS);
         }
     }
 
