@@ -38,4 +38,9 @@ public class OshiCpuMetricsProvider implements CpuMetricsProvider {
     public double[] getSystemLoadAverage() {
         return processor.getSystemLoadAverage(3);
     }
+
+    @Override
+    public String getProcessorIdentifier() {
+        return processor.getProcessorIdentifier().getName();
+    }
 }
