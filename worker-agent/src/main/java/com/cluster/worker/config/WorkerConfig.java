@@ -12,6 +12,7 @@ public class WorkerConfig {
     private Heartbeat heartbeat = new Heartbeat();
     private Metrics metrics = new Metrics();
     private Connection connection = new Connection();
+    private Cluster cluster = new Cluster();
 
     // Getters and setters
     public String getName() { return name; }
@@ -24,6 +25,8 @@ public class WorkerConfig {
     public void setMetrics(Metrics metrics) { this.metrics = metrics; }
     public Connection getConnection() { return connection; }
     public void setConnection(Connection connection) { this.connection = connection; }
+    public Cluster getCluster() { return cluster; }
+    public void setCluster(Cluster cluster) { this.cluster = cluster; }
 
     public static class Coordinator {
         private String url;
@@ -50,5 +53,11 @@ public class WorkerConfig {
         private long timeoutMs;
         public long getTimeoutMs() { return timeoutMs; }
         public void setTimeoutMs(long timeoutMs) { this.timeoutMs = timeoutMs; }
+    }
+
+    public static class Cluster {
+        private boolean configured = false;
+        public boolean isConfigured() { return configured; }
+        public void setConfigured(boolean configured) { this.configured = configured; }
     }
 }

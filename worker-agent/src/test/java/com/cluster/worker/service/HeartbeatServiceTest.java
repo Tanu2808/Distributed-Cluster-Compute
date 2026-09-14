@@ -1,8 +1,9 @@
 package com.cluster.worker.service;
 
 import com.cluster.worker.communication.WebSocketConnectionManager;
+import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.model.ExecutionState;
 import com.cluster.worker.model.SystemMetrics;
-import com.cluster.worker.model.WorkerState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +27,8 @@ class HeartbeatServiceTest {
     private SystemMetricsProvider metricsProvider;
     @Mock
     private WorkerLifecycleService lifecycleService;
+    @Mock
+    private WorkerStateManager stateManager;
 
     private HeartbeatService heartbeatService;
 
@@ -36,7 +39,9 @@ class HeartbeatServiceTest {
 
     @Test
     void testSendHeartbeatWhenOnline() {
-        when(lifecycleService.getState()).thenReturn(WorkerState.ONLINE);
+        when(lifecycleService.getStateManager()).thenReturn(stateManager);
+        when(stateManager.getConnectionState()).thenReturn(ConnectionState.ONLINE);
+        when(stateManager.getExecutionState()).thenReturn(ExecutionState.IDLE);
         when(identityGenerator.getOrCreateWorkerId()).thenReturn("worker-123");
         
         SystemMetrics metrics = new SystemMetrics();
@@ -53,7 +58,8 @@ class HeartbeatServiceTest {
 
     @Test
     void testDoesNotSendHeartbeatWhenNotOnline() {
-        when(lifecycleService.getState()).thenReturn(WorkerState.REGISTERING);
+        when(lifecycleService.getStateManager()).thenReturn(stateManager);
+        when(stateManager.getConnectionState()).thenReturn(ConnectionState.REGISTERING);
         
         heartbeatService.sendHeartbeat();
         

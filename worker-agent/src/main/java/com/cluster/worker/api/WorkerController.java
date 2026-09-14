@@ -23,7 +23,11 @@ public class WorkerController {
 
     @GetMapping("/status")
     public ResponseEntity<WorkerStatusResponse> getWorkerStatus() {
-        return ResponseEntity.ok(new WorkerStatusResponse(lifecycleService.getState().name()));
+        return ResponseEntity.ok(new WorkerStatusResponse(
+            lifecycleService.getStateManager().getLifecycleState().name(),
+            lifecycleService.getStateManager().getConnectionState().name(),
+            lifecycleService.getStateManager().getExecutionState().name()
+        ));
     }
 
     @GetMapping("/info")

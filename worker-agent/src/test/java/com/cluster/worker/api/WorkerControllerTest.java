@@ -2,7 +2,10 @@ package com.cluster.worker.api;
 
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import com.cluster.worker.service.WorkerLifecycleService;
-import com.cluster.worker.model.WorkerState;
+import com.cluster.worker.service.WorkerStateManager;
+import com.cluster.worker.model.WorkerLifecycleState;
+import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.model.ExecutionState;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -25,14 +28,22 @@ public class WorkerControllerTest {
 
     @MockBean
     private WorkerIdentityGenerator identityGenerator;
+    
+    @MockBean
+    private WorkerStateManager stateManager;
 
     @Test
     public void testGetWorkerStatus() throws Exception {
-        when(lifecycleService.getState()).thenReturn(WorkerState.ONLINE);
+        when(lifecycleService.getStateManager()).thenReturn(stateManager);
+        when(stateManager.getLifecycleState()).thenReturn(WorkerLifecycleState.CONFIGURED);
+        when(stateManager.getConnectionState()).thenReturn(ConnectionState.ONLINE);
+        when(stateManager.getExecutionState()).thenReturn(ExecutionState.IDLE);
 
         mockMvc.perform(get("/api/worker/status"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ONLINE"));
+                .andExpect(jsonPath("$.lifecycleState").value("CONFIGURED"))
+                .andExpect(jsonPath("$.connectionState").value("ONLINE"))
+                .andExpect(jsonPath("$.executionState").value("IDLE"));
     }
 
     @Test

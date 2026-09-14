@@ -2,7 +2,8 @@ package com.cluster.worker.service;
 
 import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
-import com.cluster.worker.model.WorkerState;
+import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,37 +27,54 @@ class WorkerLifecycleServiceTest {
     private SystemMetricsProvider metricsProvider;
 
     private WorkerConfig config;
+    private WorkerStateManager stateManager;
     private WorkerLifecycleService service;
 
     @BeforeEach
     void setUp() {
         config = new WorkerConfig();
         config.setName("test-worker");
-        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, config);
+        stateManager = new WorkerStateManager();
+        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, config, stateManager);
     }
 
     @Test
-    void testStartRegistersWorker() {
+    void testStartRegistersWorkerWhenConfigured() {
+        config.getCluster().setConfigured(true);
         service.start();
         
-        assertEquals(WorkerState.REGISTERING, service.getState());
+        assertEquals(WorkerLifecycleState.CONFIGURED, stateManager.getLifecycleState());
+        assertEquals(ConnectionState.CONNECTING, stateManager.getConnectionState());
         verify(connectionManager, times(1)).connect();
     }
 
     @Test
+    void testStartGoesToSetupWhenNotConfigured() {
+        config.getCluster().setConfigured(false);
+        service.start();
+        
+        assertEquals(WorkerLifecycleState.SETUP_REQUIRED, stateManager.getLifecycleState());
+        assertEquals(ConnectionState.DISCONNECTED, stateManager.getConnectionState());
+        verify(connectionManager, times(0)).connect();
+    }
+
+    @Test
     void testHandleDisconnection() {
-        service.setState(WorkerState.ONLINE);
+        config.getCluster().setConfigured(true);
+        service.start();
+        // Assume connected
+        stateManager.transitionConnection(ConnectionState.REGISTERING);
+        stateManager.transitionConnection(ConnectionState.ONLINE);
 
         service.handleDisconnection();
 
-        assertEquals(WorkerState.DISCONNECTED, service.getState()); 
-        // It transitions immediately to DISCONNECTED during retry, then after 5 secs REGISTERING
+        assertEquals(ConnectionState.DISCONNECTED, stateManager.getConnectionState()); 
     }
 
     @Test
     void testGracefulShutdown() {
         service.shutdown();
         
-        assertEquals(WorkerState.STOPPING, service.getState());
+        assertEquals(WorkerLifecycleState.STOPPING, stateManager.getLifecycleState());
     }
 }

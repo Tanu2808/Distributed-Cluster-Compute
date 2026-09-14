@@ -5,8 +5,9 @@ import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.ResourceUpdateMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
+import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.model.ExecutionState;
 import com.cluster.worker.model.SystemMetrics;
-import com.cluster.worker.model.WorkerState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,7 +35,7 @@ public class HeartbeatService {
 
     @Scheduled(fixedDelayString = "${worker.heartbeat.interval-ms:5000}")
     public void sendHeartbeat() {
-        if (lifecycleService.getState() != WorkerState.ONLINE && lifecycleService.getState() != WorkerState.BUSY) {
+        if (lifecycleService.getStateManager().getConnectionState() != ConnectionState.ONLINE) {
             // Don't send heartbeats if not registered/online
             return;
         }
@@ -42,7 +43,10 @@ public class HeartbeatService {
         String workerId = identityGenerator.getOrCreateWorkerId();
         
         HeartbeatMessage heartbeatMsg = new HeartbeatMessage();
-        heartbeatMsg.setStatus(lifecycleService.getState().name());
+        
+        // Map states back to the string values expected by coordinator for now.
+        String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
+        heartbeatMsg.setStatus(status);
         heartbeatMsg.setRunningTasks(0); // Dummy for now
 
         MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()

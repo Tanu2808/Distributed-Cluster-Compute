@@ -1,4 +1,7 @@
 export interface WorkerStatusResponse {
+  lifecycleState?: string;
+  connectionState?: string;
+  executionState?: string;
   status: string;
 }
 
