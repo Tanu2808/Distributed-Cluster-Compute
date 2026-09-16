@@ -4,7 +4,7 @@ import com.cluster.coordinator.dto.WorkerRegistrationRequest;
 import com.cluster.coordinator.dto.WorkerResponseDto;
 import com.cluster.coordinator.dto.WsMessageDto;
 import com.cluster.coordinator.model.Worker;
-import com.cluster.coordinator.model.WorkerHeartbeat;
+
 import com.cluster.coordinator.model.WorkerResource;
 import com.cluster.coordinator.model.WorkerState;
 import com.cluster.coordinator.repository.WorkerHeartbeatRepository;

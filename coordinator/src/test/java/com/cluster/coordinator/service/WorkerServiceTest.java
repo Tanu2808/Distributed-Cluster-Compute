@@ -32,6 +32,9 @@ class WorkerServiceTest {
     @Mock
     private EventService eventService;
 
+    @Mock
+    private com.cluster.coordinator.websocket.ClusterWebSocketHandler webSocketHandler;
+
     @InjectMocks
     private WorkerService workerService;
 

@@ -22,16 +22,19 @@ public class HeartbeatService {
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
     private final WorkerLifecycleService lifecycleService;
+    private final TaskService taskService;
     private Instant lastSuccessfulHeartbeat;
 
     public HeartbeatService(WebSocketConnectionManager connectionManager,
                             WorkerIdentityGenerator identityGenerator,
                             SystemMetricsProvider metricsProvider,
-                            WorkerLifecycleService lifecycleService) {
+                            WorkerLifecycleService lifecycleService,
+                            TaskService taskService) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.lifecycleService = lifecycleService;
+        this.taskService = taskService;
     }
 
     public Instant getLastSuccessfulHeartbeat() {
@@ -52,7 +55,7 @@ public class HeartbeatService {
         // Map states back to the string values expected by coordinator for now.
         String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
         heartbeatMsg.setStatus(status);
-        heartbeatMsg.setRunningTasks(0); // Dummy for now
+        heartbeatMsg.setRunningTasks(taskService.getActiveTasks().size());
 
         MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
                 .type(MessageType.HEARTBEAT)

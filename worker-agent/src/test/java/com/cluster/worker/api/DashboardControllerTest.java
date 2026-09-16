@@ -1,15 +1,12 @@
 package com.cluster.worker.api;
 
-import com.cluster.worker.api.dto.DashboardHomeResponse;
-import com.cluster.worker.api.dto.DashboardNodeResponse;
-import com.cluster.worker.config.WorkerConfig;
 import com.cluster.worker.model.ConnectionState;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.CpuMetricsProvider;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
-import com.cluster.worker.model.cluster.ClusterConfiguration;
+import com.cluster.worker.persistence.WorkerConfiguration;
 import com.cluster.worker.service.TaskService;
 import com.cluster.worker.service.WorkerLifecycleService;
 import com.cluster.worker.service.WorkerStateManager;
@@ -53,7 +50,7 @@ public class DashboardControllerTest {
         when(lifecycleService.getStateManager()).thenReturn(stateManager);
         
         when(configStore.isConfigured()).thenReturn(true);
-        ClusterConfiguration config = new ClusterConfiguration();
+        WorkerConfiguration config = new WorkerConfiguration();
         config.setClusterName("test-cluster");
         when(configStore.getConfig()).thenReturn(config);
         

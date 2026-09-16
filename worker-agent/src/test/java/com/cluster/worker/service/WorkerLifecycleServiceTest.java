@@ -31,16 +31,16 @@ class WorkerLifecycleServiceTest {
     @Mock
     private WorkerConfigurationStore configStore;
 
-    private WorkerConfig config;
+    @Mock
+    private com.cluster.worker.communication.TaskMessageHandler taskMessageHandler;
+
     private WorkerStateManager stateManager;
     private WorkerLifecycleService service;
 
     @BeforeEach
     void setUp() {
-        config = new WorkerConfig();
-        config.setName("test-worker");
         stateManager = new WorkerStateManager();
-        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, config, stateManager, configStore);
+        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, stateManager, configStore, taskMessageHandler);
     }
 
     @Test

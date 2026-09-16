@@ -4,7 +4,8 @@ import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.RegisterMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
-import com.cluster.worker.config.WorkerConfig;
+import com.cluster.worker.communication.TaskMessageHandler;
+
 import com.cluster.worker.model.ConnectionState;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.model.SystemMetrics;
@@ -35,9 +36,10 @@ public class WorkerLifecycleService {
     private final WebSocketConnectionManager connectionManager;
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
-    private final WorkerConfig config;
+
     private final WorkerStateManager stateManager;
     private final WorkerConfigurationStore configStore;
+    private final TaskMessageHandler taskMessageHandler;
     private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
 
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -45,15 +47,15 @@ public class WorkerLifecycleService {
     public WorkerLifecycleService(WebSocketConnectionManager connectionManager,
                                   WorkerIdentityGenerator identityGenerator,
                                   SystemMetricsProvider metricsProvider,
-                                  WorkerConfig config,
                                   WorkerStateManager stateManager,
-                                  WorkerConfigurationStore configStore) {
+                                  WorkerConfigurationStore configStore,
+                                  TaskMessageHandler taskMessageHandler) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
-        this.config = config;
         this.stateManager = stateManager;
         this.configStore = configStore;
+        this.taskMessageHandler = taskMessageHandler;
         
         this.connectionManager.setCallbacks(this::onConnected, this::onDisconnected);
     }
@@ -122,6 +124,9 @@ public class WorkerLifecycleService {
                 }
             }
         });
+        
+        // Subscribe to tasks
+        session.subscribe("/topic/worker." + workerId + ".tasks", taskMessageHandler);
         
         RegisterMessage registerMsg = new RegisterMessage();
         

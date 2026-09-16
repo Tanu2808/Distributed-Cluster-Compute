@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ClusterController.class)
+@SuppressWarnings("null")
 public class ClusterControllerTest {
 
     @Autowired

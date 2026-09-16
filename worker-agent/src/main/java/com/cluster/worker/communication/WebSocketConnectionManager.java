@@ -1,7 +1,7 @@
 package com.cluster.worker.communication;
 
 import com.cluster.shared.protocol.MessageEnvelope;
-import com.cluster.worker.config.WorkerConfig;
+
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -10,6 +10,7 @@ import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHttpHeaders;
@@ -18,8 +19,6 @@ import org.springframework.web.socket.messaging.WebSocketStompClient;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -28,7 +27,6 @@ public class WebSocketConnectionManager {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketConnectionManager.class);
 
-    private final WorkerConfig config;
     private final WorkerConfigurationStore configStore;
     private final WebSocketStompClient stompClient;
     private StompSession stompSession;
@@ -42,8 +40,7 @@ public class WebSocketConnectionManager {
     private Consumer<StompSession> onConnectCallback;
     private Runnable onDisconnectCallback;
 
-    public WebSocketConnectionManager(WorkerConfig config, WorkerConfigurationStore configStore, ObjectMapper objectMapper) {
-        this.config = config;
+    public WebSocketConnectionManager(WorkerConfigurationStore configStore, @NonNull ObjectMapper objectMapper) {
         this.configStore = configStore;
         this.stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         
@@ -113,7 +110,7 @@ public class WebSocketConnectionManager {
         }
     }
 
-    public void sendMessage(String destination, MessageEnvelope<?> envelope) {
+    public void sendMessage(@NonNull String destination, @NonNull MessageEnvelope<?> envelope) {
         if (stompSession != null && stompSession.isConnected()) {
             stompSession.send(destination, envelope);
             this.lastMessageTimestamp = java.time.Instant.now();

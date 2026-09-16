@@ -12,7 +12,9 @@ import java.util.Map;
 @AllArgsConstructor
 public class TaskAssignmentMessage {
     private String taskId;
-    private String image;
-    private String command;
-    private Map<String, String> environment;
+    private String taskType;
+    private Map<String, Object> input;
+    private int requiredCpuCores;
+    private long requiredMemoryMb;
+    private long timeoutSeconds;
 }

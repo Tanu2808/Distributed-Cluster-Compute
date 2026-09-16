@@ -60,7 +60,7 @@ public class DashboardController {
                 metrics.getTotalStorageMb(),
                 metrics.getGpuCount(),
                 taskService.getActiveTasks().size(),
-                0 // Stub for future Phase 7
+                taskService.getQueuedTasks().size()
         );
 
         return ResponseEntity.ok(response);

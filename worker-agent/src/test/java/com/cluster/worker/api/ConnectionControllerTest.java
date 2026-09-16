@@ -21,12 +21,21 @@ public class ConnectionControllerTest {
     @MockBean
     private WebSocketConnectionManager connectionManager;
 
+    @MockBean
+    private com.cluster.worker.service.WorkerStateManager stateManager;
+
+    @MockBean
+    private com.cluster.worker.persistence.WorkerConfigurationStore configStore;
+
+    @MockBean
+    private com.cluster.worker.service.HeartbeatService heartbeatService;
+
     @Test
     public void testGetConnectionStatus() throws Exception {
-        when(connectionManager.isConnected()).thenReturn(true);
+        when(stateManager.getConnectionState()).thenReturn(com.cluster.worker.model.ConnectionState.ONLINE);
 
-        mockMvc.perform(get("/api/connection/status"))
+        mockMvc.perform(get("/api/worker/connection"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.connected").value(true));
+                .andExpect(jsonPath("$.connectionState").value("ONLINE"));
     }
 }

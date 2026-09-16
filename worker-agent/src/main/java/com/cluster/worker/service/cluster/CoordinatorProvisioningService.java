@@ -1,6 +1,5 @@
 package com.cluster.worker.service.cluster;
 
-import com.cluster.worker.model.cluster.ClusterConnectionInfo;
 
 public interface CoordinatorProvisioningService {
     
