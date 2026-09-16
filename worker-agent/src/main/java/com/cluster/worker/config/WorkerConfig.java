@@ -13,6 +13,7 @@ public class WorkerConfig {
     private Metrics metrics = new Metrics();
     private Connection connection = new Connection();
     private Cluster cluster = new Cluster();
+    private Execution execution = new Execution();
 
     // Getters and setters
     public String getName() { return name; }
@@ -27,6 +28,8 @@ public class WorkerConfig {
     public void setConnection(Connection connection) { this.connection = connection; }
     public Cluster getCluster() { return cluster; }
     public void setCluster(Cluster cluster) { this.cluster = cluster; }
+    public Execution getExecution() { return execution; }
+    public void setExecution(Execution execution) { this.execution = execution; }
 
     public static class Coordinator {
         private String url;
@@ -56,8 +59,29 @@ public class WorkerConfig {
     }
 
     public static class Cluster {
-        private boolean configured = false;
-        public boolean isConfigured() { return configured; }
-        public void setConfigured(boolean configured) { this.configured = configured; }
+        // cluster config is now managed by WorkerConfigurationStore
+    }
+
+    public static class Execution {
+        private int maxConcurrentTasks = 4;
+        private int queueCapacity = 100;
+        private long reservedMemoryMb = 512;
+        private int reservedCpuCores = 1;
+        private long defaultTimeoutSeconds = 300;
+
+        public int getMaxConcurrentTasks() { return maxConcurrentTasks; }
+        public void setMaxConcurrentTasks(int maxConcurrentTasks) { this.maxConcurrentTasks = maxConcurrentTasks; }
+        
+        public int getQueueCapacity() { return queueCapacity; }
+        public void setQueueCapacity(int queueCapacity) { this.queueCapacity = queueCapacity; }
+        
+        public long getReservedMemoryMb() { return reservedMemoryMb; }
+        public void setReservedMemoryMb(long reservedMemoryMb) { this.reservedMemoryMb = reservedMemoryMb; }
+        
+        public int getReservedCpuCores() { return reservedCpuCores; }
+        public void setReservedCpuCores(int reservedCpuCores) { this.reservedCpuCores = reservedCpuCores; }
+        
+        public long getDefaultTimeoutSeconds() { return defaultTimeoutSeconds; }
+        public void setDefaultTimeoutSeconds(long defaultTimeoutSeconds) { this.defaultTimeoutSeconds = defaultTimeoutSeconds; }
     }
 }

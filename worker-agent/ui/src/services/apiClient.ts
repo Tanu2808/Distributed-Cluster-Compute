@@ -10,7 +10,15 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+    try {
+      const errorData = await response.json();
+      throw new Error(errorData.message || errorData.error || `API request failed: ${response.statusText}`);
+    } catch (e) {
+      if (e instanceof Error && e.message !== 'Unexpected end of JSON input') {
+        throw e;
+      }
+      throw new Error(`API request failed: ${response.statusText}`);
+    }
   }
 
   return response.json();

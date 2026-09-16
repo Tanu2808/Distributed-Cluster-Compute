@@ -6,6 +6,7 @@ import com.cluster.worker.model.ConnectionState;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,44 +14,38 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WorkerLifecycleServiceTest {
 
     @Mock
     private WebSocketConnectionManager connectionManager;
+
     @Mock
     private WorkerIdentityGenerator identityGenerator;
+
     @Mock
     private SystemMetricsProvider metricsProvider;
 
-    private WorkerConfig config;
+    @Mock
+    private WorkerConfigurationStore configStore;
+
+    @Mock
+    private com.cluster.worker.communication.TaskMessageHandler taskMessageHandler;
+
     private WorkerStateManager stateManager;
     private WorkerLifecycleService service;
 
     @BeforeEach
     void setUp() {
-        config = new WorkerConfig();
-        config.setName("test-worker");
         stateManager = new WorkerStateManager();
-        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, config, stateManager);
-    }
-
-    @Test
-    void testStartRegistersWorkerWhenConfigured() {
-        config.getCluster().setConfigured(true);
-        service.start();
-        
-        assertEquals(WorkerLifecycleState.CONFIGURED, stateManager.getLifecycleState());
-        assertEquals(ConnectionState.CONNECTING, stateManager.getConnectionState());
-        verify(connectionManager, times(1)).connect();
+        service = new WorkerLifecycleService(connectionManager, identityGenerator, metricsProvider, stateManager, configStore, taskMessageHandler);
     }
 
     @Test
     void testStartGoesToSetupWhenNotConfigured() {
-        config.getCluster().setConfigured(false);
+        when(configStore.isConfigured()).thenReturn(false);
         service.start();
         
         assertEquals(WorkerLifecycleState.SETUP_REQUIRED, stateManager.getLifecycleState());
@@ -59,8 +54,18 @@ class WorkerLifecycleServiceTest {
     }
 
     @Test
+    void testStartRegistersWorkerWhenConfigured() {
+        when(configStore.isConfigured()).thenReturn(true);
+        service.start();
+        
+        assertEquals(WorkerLifecycleState.CONFIGURED, stateManager.getLifecycleState());
+        assertEquals(ConnectionState.CONNECTING, stateManager.getConnectionState());
+        verify(connectionManager, times(1)).connect();
+    }
+
+    @Test
     void testHandleDisconnection() {
-        config.getCluster().setConfigured(true);
+        when(configStore.isConfigured()).thenReturn(true);
         service.start();
         // Assume connected
         stateManager.transitionConnection(ConnectionState.REGISTERING);
@@ -72,9 +77,8 @@ class WorkerLifecycleServiceTest {
     }
 
     @Test
-    void testGracefulShutdown() {
+    void testShutdownTransitionsToStopping() {
         service.shutdown();
-        
         assertEquals(WorkerLifecycleState.STOPPING, stateManager.getLifecycleState());
     }
 }

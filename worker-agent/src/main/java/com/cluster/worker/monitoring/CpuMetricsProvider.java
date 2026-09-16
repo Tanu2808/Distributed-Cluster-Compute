@@ -5,4 +5,5 @@ public interface CpuMetricsProvider {
     int getLogicalProcessorCount();
     double getCpuUsagePercent();
     double[] getSystemLoadAverage();
+    String getProcessorIdentifier();
 }

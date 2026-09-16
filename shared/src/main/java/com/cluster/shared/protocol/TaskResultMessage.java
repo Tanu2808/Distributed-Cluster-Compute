@@ -11,7 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TaskResultMessage {
     private String taskId;
-    private int exitCode;
-    private String output;
+    private String status;
+    private Object result;
+    private long executionDurationMs;
     private String error;
 }

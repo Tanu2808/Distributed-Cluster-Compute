@@ -1,6 +1,8 @@
 import { fetchApi } from './apiClient';
-import type { SettingsResponse } from '../types';
+import type { WorkerSettingsResponse, ClusterSettingsResponse } from '../types';
 
 export const settingsApi = {
-  getSettings: () => fetchApi<SettingsResponse>('/settings'),
+  getWorkerSettings: () => fetchApi<WorkerSettingsResponse>('/settings/worker'),
+  getClusterSettings: () => fetchApi<ClusterSettingsResponse>('/settings/cluster'),
+  resetSettings: () => fetchApi<{ message: string }>('/settings/reset', { method: 'POST' }),
 };

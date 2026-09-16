@@ -4,8 +4,10 @@ import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.RegisterMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
-import com.cluster.worker.config.WorkerConfig;
+import com.cluster.worker.communication.TaskMessageHandler;
+
 import com.cluster.worker.model.ConnectionState;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
@@ -34,8 +36,10 @@ public class WorkerLifecycleService {
     private final WebSocketConnectionManager connectionManager;
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
-    private final WorkerConfig config;
+
     private final WorkerStateManager stateManager;
+    private final WorkerConfigurationStore configStore;
+    private final TaskMessageHandler taskMessageHandler;
     private final AtomicBoolean isReconnecting = new AtomicBoolean(false);
 
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
@@ -43,13 +47,15 @@ public class WorkerLifecycleService {
     public WorkerLifecycleService(WebSocketConnectionManager connectionManager,
                                   WorkerIdentityGenerator identityGenerator,
                                   SystemMetricsProvider metricsProvider,
-                                  WorkerConfig config,
-                                  WorkerStateManager stateManager) {
+                                  WorkerStateManager stateManager,
+                                  WorkerConfigurationStore configStore,
+                                  TaskMessageHandler taskMessageHandler) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
-        this.config = config;
         this.stateManager = stateManager;
+        this.configStore = configStore;
+        this.taskMessageHandler = taskMessageHandler;
         
         this.connectionManager.setCallbacks(this::onConnected, this::onDisconnected);
     }
@@ -59,7 +65,7 @@ public class WorkerLifecycleService {
         if (stateManager.getLifecycleState() == WorkerLifecycleState.STARTING) {
             stateManager.transitionLifecycle(WorkerLifecycleState.INITIALIZING);
             
-            if (!config.getCluster().isConfigured()) {
+            if (!configStore.isConfigured()) {
                 stateManager.transitionLifecycle(WorkerLifecycleState.SETUP_REQUIRED);
                 System.out.println("Worker is not configured. Entering SETUP_REQUIRED state.");
                 return;
@@ -119,6 +125,9 @@ public class WorkerLifecycleService {
             }
         });
         
+        // Subscribe to tasks
+        session.subscribe("/topic/worker." + workerId + ".tasks", taskMessageHandler);
+        
         RegisterMessage registerMsg = new RegisterMessage();
         
         try {
@@ -130,10 +139,17 @@ public class WorkerLifecycleService {
         
         registerMsg.setOsName(System.getProperty("os.name"));
         registerMsg.setOsVersion(System.getProperty("os.version"));
+        registerMsg.setArchitecture(System.getProperty("os.arch"));
+        registerMsg.setAgentVersion("0.0.1-SNAPSHOT");
         
         SystemMetrics currentMetrics = metricsProvider.collectMetrics();
         registerMsg.setCpuCores(currentMetrics.getCpuCores());
         registerMsg.setMemoryMb(currentMetrics.getTotalMemoryMb());
+        
+        // Include basic static information as part of registration
+        registerMsg.setCpuInfo(currentMetrics.getCpuCores() + " Cores");
+        registerMsg.setGpuInfo(currentMetrics.getGpuCount() + " GPUs");
+        registerMsg.setStorageInfo(currentMetrics.getTotalStorageMb() + " MB Total Storage");
         
         registerMsg.setTags(new HashMap<>()); // dummy for now
 
@@ -157,8 +173,10 @@ public class WorkerLifecycleService {
         }
         
         if (isReconnecting.compareAndSet(false, true)) {
-            System.err.println("Disconnected from coordinator. Reconnecting in 5 seconds...");
-            executorService.schedule(this::connectWithBackoff, 5, TimeUnit.SECONDS);
+            int attempts = connectionManager.getReconnectCount();
+            long delay = Math.min(60, 5L * (1L << Math.min(attempts, 4))); // 5, 10, 20, 40, 60...
+            System.err.println("Disconnected from coordinator. Reconnecting in " + delay + " seconds...");
+            executorService.schedule(this::connectWithBackoff, delay, TimeUnit.SECONDS);
         }
     }
 

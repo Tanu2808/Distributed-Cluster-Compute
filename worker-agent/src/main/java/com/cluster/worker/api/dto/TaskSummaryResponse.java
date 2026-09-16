@@ -1,3 +1,4 @@
 package com.cluster.worker.api.dto;
 import java.util.List;
-public record TaskSummaryResponse(List<Object> tasks) {}
+import com.cluster.worker.task.WorkerTask;
+public record TaskSummaryResponse(List<WorkerTask> tasks) {}

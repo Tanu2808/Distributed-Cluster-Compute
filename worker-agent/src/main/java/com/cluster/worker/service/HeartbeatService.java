@@ -22,15 +22,23 @@ public class HeartbeatService {
     private final WorkerIdentityGenerator identityGenerator;
     private final SystemMetricsProvider metricsProvider;
     private final WorkerLifecycleService lifecycleService;
+    private final TaskService taskService;
+    private Instant lastSuccessfulHeartbeat;
 
     public HeartbeatService(WebSocketConnectionManager connectionManager,
                             WorkerIdentityGenerator identityGenerator,
                             SystemMetricsProvider metricsProvider,
-                            WorkerLifecycleService lifecycleService) {
+                            WorkerLifecycleService lifecycleService,
+                            TaskService taskService) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
         this.lifecycleService = lifecycleService;
+        this.taskService = taskService;
+    }
+
+    public Instant getLastSuccessfulHeartbeat() {
+        return lastSuccessfulHeartbeat;
     }
 
     @Scheduled(fixedDelayString = "${worker.heartbeat.interval-ms:5000}")
@@ -47,7 +55,7 @@ public class HeartbeatService {
         // Map states back to the string values expected by coordinator for now.
         String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
         heartbeatMsg.setStatus(status);
-        heartbeatMsg.setRunningTasks(0); // Dummy for now
+        heartbeatMsg.setRunningTasks(taskService.getActiveTasks().size());
 
         MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
                 .type(MessageType.HEARTBEAT)
@@ -61,12 +69,26 @@ public class HeartbeatService {
         // Also send resource update
         SystemMetrics metrics = metricsProvider.collectMetrics();
         ResourceUpdateMessage resourceMsg = new ResourceUpdateMessage();
-        resourceMsg.setCpuUsagePercent(metrics.getCpuUsagePercent());
-        resourceMsg.setMemoryUsedBytes(metrics.getUsedMemoryMb() * 1024L * 1024L);
-        resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
-        resourceMsg.setGpuUsagePercent(0.0);
-        resourceMsg.setDiskFreeBytes((metrics.getTotalStorageMb() - metrics.getUsedStorageMb()) * 1024L * 1024L);
-        resourceMsg.setDiskTotalBytes(metrics.getTotalStorageMb() * 1024L * 1024L);
+        if (metrics.getCpuUsagePercent() > 0) {
+            resourceMsg.setCpuUsagePercent(metrics.getCpuUsagePercent());
+        }
+        if (metrics.getUsedMemoryMb() > 0) {
+            resourceMsg.setMemoryUsedBytes(metrics.getUsedMemoryMb() * 1024L * 1024L);
+        }
+        if (metrics.getTotalMemoryMb() > 0) {
+            resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
+        }
+        // GPU not currently populated by real metrics, keep null instead of 0.0
+        
+        long usedStorage = metrics.getUsedStorageMb();
+        long totalStorage = metrics.getTotalStorageMb();
+        
+        if (totalStorage > 0) {
+            resourceMsg.setDiskTotalBytes(totalStorage * 1024L * 1024L);
+            if (usedStorage > 0) {
+                resourceMsg.setDiskFreeBytes((totalStorage - usedStorage) * 1024L * 1024L);
+            }
+        }
         
         MessageEnvelope<ResourceUpdateMessage> resEnvelope = MessageEnvelope.<ResourceUpdateMessage>builder()
                 .type(MessageType.RESOURCE_UPDATE)
@@ -76,5 +98,7 @@ public class HeartbeatService {
                 .build();
 
         connectionManager.sendMessage("/app/worker.resource", resEnvelope);
+        
+        lastSuccessfulHeartbeat = Instant.now();
     }
 }

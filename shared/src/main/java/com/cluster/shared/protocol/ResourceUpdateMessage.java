@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ResourceUpdateMessage {
-    private double cpuUsagePercent;
-    private long memoryUsedBytes;
-    private long memoryTotalBytes;
-    private double gpuUsagePercent;
-    private long diskFreeBytes;
-    private long diskTotalBytes;
+    private Double cpuUsagePercent;
+    private Long memoryUsedBytes;
+    private Long memoryTotalBytes;
+    private Double gpuUsagePercent;
+    private Long diskFreeBytes;
+    private Long diskTotalBytes;
 }

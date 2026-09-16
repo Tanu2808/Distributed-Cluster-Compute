@@ -1,6 +1,8 @@
 package com.cluster.worker.api;
 
-import com.cluster.worker.config.WorkerConfig;
+import com.cluster.worker.persistence.WorkerConfiguration;
+import com.cluster.worker.persistence.WorkerConfigurationStore;
+import com.cluster.worker.service.WorkerStateManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -9,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -19,29 +22,50 @@ public class SettingsControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
-    private WorkerConfig config;
+    private WorkerConfigurationStore configStore;
+
+    @MockBean
+    private WorkerStateManager stateManager;
 
     @Test
-    public void testGetSettings() throws Exception {
-        WorkerConfig.Coordinator coordConfig = new WorkerConfig.Coordinator();
-        coordConfig.setUrl("http://localhost:8080");
+    public void testGetWorkerSettingsExcludesSecrets() throws Exception {
+        WorkerConfiguration config = new WorkerConfiguration("test-worker-id");
+        config.setVersion(1);
+        config.setEnrollmentCredential("secret-token-do-not-leak");
 
-        WorkerConfig.Heartbeat hbConfig = new WorkerConfig.Heartbeat();
-        hbConfig.setIntervalMs(10000);
+        when(configStore.getConfig()).thenReturn(config);
 
-        WorkerConfig.Metrics metricConfig = new WorkerConfig.Metrics();
-        metricConfig.setIntervalMs(15000);
-
-        when(config.getName()).thenReturn("test-worker");
-        when(config.getCoordinator()).thenReturn(coordConfig);
-        when(config.getHeartbeat()).thenReturn(hbConfig);
-        when(config.getMetrics()).thenReturn(metricConfig);
-
-        mockMvc.perform(get("/api/settings"))
+        mockMvc.perform(get("/api/settings/worker"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workerName").value("test-worker"))
+                .andExpect(jsonPath("$.workerId").value("test-worker-id"))
+                .andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.enrollmentCredential").doesNotExist());
+    }
+
+    @Test
+    public void testGetClusterSettingsExcludesSecrets() throws Exception {
+        WorkerConfiguration config = new WorkerConfiguration("test-worker-id");
+        config.setClusterId("test-cluster-id");
+        config.setClusterName("My Cluster");
+        config.setCoordinatorUrl("http://localhost:8080");
+        config.setEnrollmentCredential("secret-token-do-not-leak");
+
+        when(configStore.getConfig()).thenReturn(config);
+        when(configStore.isConfigured()).thenReturn(true);
+
+        mockMvc.perform(get("/api/settings/cluster"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clusterId").value("test-cluster-id"))
+                .andExpect(jsonPath("$.clusterName").value("My Cluster"))
                 .andExpect(jsonPath("$.coordinatorUrl").value("http://localhost:8080"))
-                .andExpect(jsonPath("$.heartbeatIntervalMs").value(10000))
-                .andExpect(jsonPath("$.metricsIntervalMs").value(15000));
+                .andExpect(jsonPath("$.isConfigured").value(true))
+                .andExpect(jsonPath("$.enrollmentCredential").doesNotExist());
+    }
+
+    @Test
+    public void testResetConfiguration() throws Exception {
+        mockMvc.perform(post("/api/settings/reset"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Configuration reset successfully"));
     }
 }

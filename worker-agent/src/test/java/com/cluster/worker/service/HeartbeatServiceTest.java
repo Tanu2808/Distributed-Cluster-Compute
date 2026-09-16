@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,12 +30,15 @@ class HeartbeatServiceTest {
     private WorkerLifecycleService lifecycleService;
     @Mock
     private WorkerStateManager stateManager;
+    @Mock
+    private TaskService taskService;
 
     private HeartbeatService heartbeatService;
 
     @BeforeEach
     void setUp() {
-        heartbeatService = new HeartbeatService(connectionManager, identityGenerator, metricsProvider, lifecycleService);
+        MockitoAnnotations.openMocks(this);
+        heartbeatService = new HeartbeatService(connectionManager, identityGenerator, metricsProvider, lifecycleService, taskService);
     }
 
     @Test

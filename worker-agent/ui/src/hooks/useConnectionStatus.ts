@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { connectionApi } from '../services/connectionApi';
-import type { ConnectionStatusResponse } from '../types';
+import type { ConnectionDiagnosticsResponse } from '../types';
 
 export function useConnectionStatus(pollingIntervalMs = 5000) {
-  const [connection, setConnection] = useState<ConnectionStatusResponse | null>(null);
+  const [connection, setConnection] = useState<ConnectionDiagnosticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,15 @@ export function useConnectionStatus(pollingIntervalMs = 5000) {
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err.message : 'Failed to fetch connection status');
-          setConnection({ connected: false });
+          setConnection({
+            connectionState: 'DISCONNECTED',
+            coordinatorUrl: '',
+            connectedSince: null,
+            lastSuccessfulHeartbeat: null,
+            lastMessageTimestamp: null,
+            reconnectCount: 0,
+            lastConnectionError: err instanceof Error ? err.message : 'Unknown error'
+          });
         }
       } finally {
         if (mounted) setLoading(false);
