@@ -64,17 +64,18 @@ public class WorkerStateManager {
     }
 
     private boolean isValidConnectionTransition(ConnectionState current, ConnectionState next) {
+        if (current == next) return true;
         switch (current) {
             case DISCONNECTED:
-                return next == ConnectionState.CONNECTING;
+                return next == ConnectionState.CONNECTING || next == ConnectionState.RECONNECTING;
+            case RECONNECTING:
+                return next == ConnectionState.CONNECTING || next == ConnectionState.DISCONNECTED;
             case CONNECTING:
-                return next == ConnectionState.REGISTERING || next == ConnectionState.DISCONNECTED;
+                return next == ConnectionState.REGISTERING || next == ConnectionState.DISCONNECTED || next == ConnectionState.RECONNECTING;
             case REGISTERING:
                 return next == ConnectionState.ONLINE || next == ConnectionState.DISCONNECTED;
             case ONLINE:
                 return next == ConnectionState.DISCONNECTED;
-            case RECONNECTING:
-                return next == ConnectionState.CONNECTING || next == ConnectionState.DISCONNECTED;
             default:
                 return false;
         }

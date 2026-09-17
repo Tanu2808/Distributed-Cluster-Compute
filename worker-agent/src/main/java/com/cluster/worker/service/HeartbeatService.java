@@ -41,64 +41,75 @@ public class HeartbeatService {
         return lastSuccessfulHeartbeat;
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(HeartbeatService.class);
+
     @Scheduled(fixedDelayString = "${worker.heartbeat.interval-ms:5000}")
     public void sendHeartbeat() {
+        if (lifecycleService.getStateManager().getLifecycleState() == com.cluster.worker.model.WorkerLifecycleState.STOPPING) {
+            return;
+        }
+
         if (lifecycleService.getStateManager().getConnectionState() != ConnectionState.ONLINE) {
             // Don't send heartbeats if not registered/online
             return;
         }
 
-        String workerId = identityGenerator.getOrCreateWorkerId();
-        
-        HeartbeatMessage heartbeatMsg = new HeartbeatMessage();
-        
-        // Map states back to the string values expected by coordinator for now.
-        String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
-        heartbeatMsg.setStatus(status);
-        heartbeatMsg.setRunningTasks(taskService.getActiveTasks().size());
+        try {
+            String workerId = identityGenerator.getOrCreateWorkerId();
+            
+            HeartbeatMessage heartbeatMsg = new HeartbeatMessage();
+            String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
+            heartbeatMsg.setStatus(status);
+            heartbeatMsg.setRunningTasks(taskService.getActiveTasks().size());
 
-        MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
-                .type(MessageType.HEARTBEAT)
-                .workerId(workerId)
-                .timestamp(Instant.now())
-                .payload(heartbeatMsg)
-                .build();
+            MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
+                    .type(MessageType.HEARTBEAT)
+                    .workerId(workerId)
+                    .timestamp(Instant.now())
+                    .payload(heartbeatMsg)
+                    .build();
 
-        connectionManager.sendMessage("/app/worker.heartbeat", hbEnvelope);
-        
-        // Also send resource update
-        SystemMetrics metrics = metricsProvider.collectMetrics();
-        ResourceUpdateMessage resourceMsg = new ResourceUpdateMessage();
-        if (metrics.getCpuUsagePercent() > 0) {
-            resourceMsg.setCpuUsagePercent(metrics.getCpuUsagePercent());
-        }
-        if (metrics.getUsedMemoryMb() > 0) {
-            resourceMsg.setMemoryUsedBytes(metrics.getUsedMemoryMb() * 1024L * 1024L);
-        }
-        if (metrics.getTotalMemoryMb() > 0) {
-            resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
-        }
-        // GPU not currently populated by real metrics, keep null instead of 0.0
-        
-        long usedStorage = metrics.getUsedStorageMb();
-        long totalStorage = metrics.getTotalStorageMb();
-        
-        if (totalStorage > 0) {
-            resourceMsg.setDiskTotalBytes(totalStorage * 1024L * 1024L);
-            if (usedStorage > 0) {
-                resourceMsg.setDiskFreeBytes((totalStorage - usedStorage) * 1024L * 1024L);
+            connectionManager.sendMessage("/app/worker.heartbeat", hbEnvelope);
+            
+            // Send resource update safely
+            try {
+                SystemMetrics metrics = metricsProvider.collectMetrics();
+                ResourceUpdateMessage resourceMsg = new ResourceUpdateMessage();
+                if (metrics.getCpuUsagePercent() > 0) {
+                    resourceMsg.setCpuUsagePercent(metrics.getCpuUsagePercent());
+                }
+                if (metrics.getUsedMemoryMb() > 0) {
+                    resourceMsg.setMemoryUsedBytes(metrics.getUsedMemoryMb() * 1024L * 1024L);
+                }
+                if (metrics.getTotalMemoryMb() > 0) {
+                    resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
+                }
+                
+                long usedStorage = metrics.getUsedStorageMb();
+                long totalStorage = metrics.getTotalStorageMb();
+                
+                if (totalStorage > 0) {
+                    resourceMsg.setDiskTotalBytes(totalStorage * 1024L * 1024L);
+                    if (usedStorage > 0) {
+                        resourceMsg.setDiskFreeBytes(Math.max(0, totalStorage - usedStorage) * 1024L * 1024L);
+                    }
+                }
+                
+                MessageEnvelope<ResourceUpdateMessage> resEnvelope = MessageEnvelope.<ResourceUpdateMessage>builder()
+                        .type(MessageType.RESOURCE_UPDATE)
+                        .workerId(workerId)
+                        .timestamp(Instant.now())
+                        .payload(resourceMsg)
+                        .build();
+
+                connectionManager.sendMessage("/app/worker.resource", resEnvelope);
+            } catch (Exception e) {
+                log.warn("Failed to collect or dispatch resource update: {}", e.getMessage());
             }
-        }
-        
-        MessageEnvelope<ResourceUpdateMessage> resEnvelope = MessageEnvelope.<ResourceUpdateMessage>builder()
-                .type(MessageType.RESOURCE_UPDATE)
-                .workerId(workerId)
-                .timestamp(Instant.now())
-                .payload(resourceMsg)
-                .build();
 
-        connectionManager.sendMessage("/app/worker.resource", resEnvelope);
-        
-        lastSuccessfulHeartbeat = Instant.now();
+            lastSuccessfulHeartbeat = Instant.now();
+        } catch (Exception e) {
+            log.warn("Failed to send heartbeat: {}", e.getMessage());
+        }
     }
 }

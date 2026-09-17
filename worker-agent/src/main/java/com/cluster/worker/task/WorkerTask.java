@@ -76,51 +76,80 @@ public class WorkerTask {
         this.timeoutSeconds = timeoutSeconds;
     }
 
-    public TaskState getState() {
+    public synchronized TaskState getState() {
         return state;
     }
 
-    public void setState(TaskState state) {
+    public synchronized void setState(TaskState state) {
+        if (this.state != null && this.state.isTerminal()) {
+            return;
+        }
+        if (state == TaskState.RUNNING && this.startedAt == null) {
+            this.startedAt = Instant.now();
+        }
+        if (state != null && state.isTerminal() && this.completedAt == null) {
+            this.completedAt = Instant.now();
+        }
         this.state = state;
     }
 
-    public String getErrorMessage() {
+    public synchronized boolean transitionState(TaskState newState) {
+        if (this.state != null && this.state.isTerminal()) {
+            return false;
+        }
+        setState(newState);
+        return true;
+    }
+
+    public synchronized boolean isTerminal() {
+        return state != null && state.isTerminal();
+    }
+
+    public synchronized boolean isCancelled() {
+        return state == TaskState.CANCELLED;
+    }
+
+    public synchronized boolean isRunning() {
+        return state == TaskState.RUNNING;
+    }
+
+    public synchronized String getErrorMessage() {
         return errorMessage;
     }
 
-    public void setErrorMessage(String errorMessage) {
+    public synchronized void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
     }
 
-    public Object getResult() {
+    public synchronized Object getResult() {
         return result;
     }
 
-    public void setResult(Object result) {
+    public synchronized void setResult(Object result) {
         this.result = result;
     }
 
-    public Instant getReceivedAt() {
+    public synchronized Instant getReceivedAt() {
         return receivedAt;
     }
 
-    public void setReceivedAt(Instant receivedAt) {
+    public synchronized void setReceivedAt(Instant receivedAt) {
         this.receivedAt = receivedAt;
     }
 
-    public Instant getStartedAt() {
+    public synchronized Instant getStartedAt() {
         return startedAt;
     }
 
-    public void setStartedAt(Instant startedAt) {
+    public synchronized void setStartedAt(Instant startedAt) {
         this.startedAt = startedAt;
     }
 
-    public Instant getCompletedAt() {
+    public synchronized Instant getCompletedAt() {
         return completedAt;
     }
 
-    public void setCompletedAt(Instant completedAt) {
+    public synchronized void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
     }
 }
