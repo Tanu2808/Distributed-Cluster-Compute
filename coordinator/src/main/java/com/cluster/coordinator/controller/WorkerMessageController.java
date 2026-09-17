@@ -25,15 +25,18 @@ public class WorkerMessageController {
     
     private final WorkerService workerService;
     private final HeartbeatService heartbeatService;
+    private final com.cluster.coordinator.service.TaskExecutionService taskExecutionService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
     public WorkerMessageController(WorkerService workerService,
                                    HeartbeatService heartbeatService,
+                                   com.cluster.coordinator.service.TaskExecutionService taskExecutionService,
                                    SimpMessagingTemplate messagingTemplate,
                                    ObjectMapper objectMapper) {
         this.workerService = workerService;
         this.heartbeatService = heartbeatService;
+        this.taskExecutionService = taskExecutionService;
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
     }
@@ -115,6 +118,36 @@ public class WorkerMessageController {
             heartbeatService.processHeartbeat(envelope.getWorkerId(), request);
         } catch (Exception e) {
             log.error("Failed to process resource update for worker {}", envelope.getWorkerId(), e);
+        }
+    }
+
+    @MessageMapping("/worker.task.status")
+    public void handleTaskStatus(@Payload MessageEnvelope<Map<String, Object>> envelope) {
+        if (envelope.getType() != MessageType.TASK_STATUS) {
+            log.warn("Expected TASK_STATUS message but got {}", envelope.getType());
+            return;
+        }
+
+        try {
+            com.cluster.shared.protocol.TaskStatusMessage statusMessage = objectMapper.convertValue(envelope.getPayload(), com.cluster.shared.protocol.TaskStatusMessage.class);
+            taskExecutionService.processTaskStatus(envelope.getWorkerId(), statusMessage);
+        } catch (Exception e) {
+            log.error("Failed to process task status from worker {}", envelope.getWorkerId(), e);
+        }
+    }
+
+    @MessageMapping("/worker.task.result")
+    public void handleTaskResult(@Payload MessageEnvelope<Map<String, Object>> envelope) {
+        if (envelope.getType() != MessageType.TASK_RESULT) {
+            log.warn("Expected TASK_RESULT message but got {}", envelope.getType());
+            return;
+        }
+
+        try {
+            com.cluster.shared.protocol.TaskResultMessage resultMessage = objectMapper.convertValue(envelope.getPayload(), com.cluster.shared.protocol.TaskResultMessage.class);
+            taskExecutionService.processTaskResult(envelope.getWorkerId(), resultMessage);
+        } catch (Exception e) {
+            log.error("Failed to process task result from worker {}", envelope.getWorkerId(), e);
         }
     }
 }

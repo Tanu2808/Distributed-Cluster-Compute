@@ -74,9 +74,11 @@ public class ResourceReservationService {
     public void release(String workerId, String taskId) {
         taskAssignmentRepository.findByTaskId(taskId).ifPresent(assignment -> {
             if (assignment.getWorkerId().equals(workerId)) {
-                // Do not delete, transition to CANCELLED per requirements
-                assignment.setState(AssignmentState.CANCELLED);
-                taskAssignmentRepository.save(assignment);
+                // Do not delete, transition to CANCELLED if it is not already in a terminal state
+                if (assignment.getState() == AssignmentState.ALLOCATED || assignment.getState() == AssignmentState.ACTIVE) {
+                    assignment.setState(AssignmentState.CANCELLED);
+                    taskAssignmentRepository.save(assignment);
+                }
             }
         });
     }

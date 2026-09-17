@@ -189,7 +189,7 @@ public class TaskService {
                 return;
             }
 
-            sendStatus(task.getTaskId(), TaskState.QUEUED, "Task queued successfully");
+            sendStatus(task, TaskState.QUEUED, "Task queued successfully");
             log.info("Task {} queued successfully", taskId);
         }
     }
@@ -245,7 +245,7 @@ public class TaskService {
         }
         admissionService.release(task);
         log.warn("Task {} rejected: {}", task.getTaskId(), reason);
-        sendStatus(task.getTaskId(), TaskState.REJECTED, reason);
+        sendStatus(task, TaskState.REJECTED, reason);
         sendResult(task);
     }
 
@@ -280,7 +280,7 @@ public class TaskService {
             task.setStartedAt(Instant.now());
         }
         updateExecutionState();
-        sendStatus(task.getTaskId(), TaskState.RUNNING, "Task started");
+        sendStatus(task, TaskState.RUNNING, "Task started");
         log.info("Task {} execution started", task.getTaskId());
 
         TaskHandler handler;
@@ -294,7 +294,7 @@ public class TaskService {
                     task.setErrorMessage(e.getMessage());
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
-                    sendStatus(task.getTaskId(), TaskState.FAILED, task.getErrorMessage());
+                    sendStatus(task, TaskState.FAILED, task.getErrorMessage());
                     sendResult(task);
                 }
             }
@@ -327,7 +327,7 @@ public class TaskService {
                     task.setErrorMessage("Task timed out after " + task.getTimeoutSeconds() + " seconds");
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
-                    sendStatus(task.getTaskId(), TaskState.FAILED, task.getErrorMessage());
+                    sendStatus(task, TaskState.FAILED, task.getErrorMessage());
                     sendResult(task);
                     log.warn("Task {} timed out after {} seconds", task.getTaskId(), task.getTimeoutSeconds());
                 }
@@ -339,7 +339,7 @@ public class TaskService {
                     task.setErrorMessage("Task execution was cancelled");
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
-                    sendStatus(task.getTaskId(), TaskState.CANCELLED, task.getErrorMessage());
+                    sendStatus(task, TaskState.CANCELLED, task.getErrorMessage());
                     sendResult(task);
                 }
             }
@@ -356,7 +356,7 @@ public class TaskService {
                     }
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
-                    sendStatus(task.getTaskId(), task.getState(), task.getErrorMessage());
+                    sendStatus(task, task.getState(), task.getErrorMessage());
                     sendResult(task);
                     log.warn("Task {} failed during execution: {}", task.getTaskId(), task.getErrorMessage());
                 }
@@ -370,7 +370,7 @@ public class TaskService {
                     task.setErrorMessage("Task execution thread interrupted");
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
-                    sendStatus(task.getTaskId(), TaskState.FAILED, task.getErrorMessage());
+                    sendStatus(task, TaskState.FAILED, task.getErrorMessage());
                     sendResult(task);
                 }
             }
@@ -399,6 +399,23 @@ public class TaskService {
         } catch (Exception e) {
             log.debug("Execution state transition note: {}", e.getMessage());
         }
+    }
+
+    private void sendStatus(WorkerTask task, TaskState state, String message) {
+        TaskStatusMessage statusMsg = TaskStatusMessage.builder()
+                .taskId(task.getTaskId())
+                .state(state.name())
+                .message(message)
+                .jobId(task.getJobId())
+                .partitionId(task.getPartitionId())
+                .build();
+        MessageEnvelope<TaskStatusMessage> env = MessageEnvelope.<TaskStatusMessage>builder()
+                .type(MessageType.TASK_STATUS)
+                .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
+                .timestamp(Instant.now())
+                .payload(statusMsg)
+                .build();
+        connectionManager.sendMessage("/app/worker.task.status", env);
     }
 
     private void sendStatus(String taskId, TaskState state, String message) {
