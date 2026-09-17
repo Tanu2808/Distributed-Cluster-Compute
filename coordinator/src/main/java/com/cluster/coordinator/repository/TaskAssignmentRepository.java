@@ -13,4 +13,5 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
     List<TaskAssignment> findByWorkerId(String workerId);
     Optional<TaskAssignment> findByTaskId(String taskId);
     List<TaskAssignment> findByState(AssignmentState state);
+    List<TaskAssignment> findByWorkerIdAndStateIn(String workerId, List<AssignmentState> states);
 }
