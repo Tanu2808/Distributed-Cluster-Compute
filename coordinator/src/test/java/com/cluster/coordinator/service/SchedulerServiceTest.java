@@ -11,6 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
+import com.cluster.shared.protocol.MessageEnvelope;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -38,6 +44,9 @@ public class SchedulerServiceTest {
     @Autowired
     private JobRepository jobRepository;
 
+    @MockitoBean
+    private SimpMessagingTemplate messagingTemplate;
+
     @BeforeEach
     public void setup() {
         taskAssignmentRepository.deleteAll();
@@ -56,12 +65,22 @@ public class SchedulerServiceTest {
     }
 
     private Task createTask(String id, String jobId, int cpu, long memory, TaskState state) {
+        if (!jobRepository.existsById(jobId)) {
+            Job j = new Job();
+            j.setId(jobId);
+            j.setState(JobState.QUEUED);
+            j.setTotalPartitions(3);
+            jobRepository.save(j);
+        }
         Task t = new Task();
         t.setId(id);
         t.setJobId(jobId);
         t.setRequiredCpu(cpu);
         t.setRequiredMemory(memory);
         t.setState(state);
+        t.setTaskType("SUM_RANGE");
+        t.setInput("{\"start\":1,\"end\":100}");
+        t.setPartitionId(1);
         return taskRepository.save(t);
     }
 
@@ -233,5 +252,36 @@ public class SchedulerServiceTest {
         assertEquals(0, resourceReservationService.getAvailableCpu("A"));
         assertEquals(0, resourceReservationService.getAvailableCpu("B"));
         assertEquals(0, resourceReservationService.getAvailableCpu("C"));
+        
+        verify(messagingTemplate, times(3)).convertAndSend(anyString(), any(MessageEnvelope.class));
+    }
+
+    @Test
+    public void testSendFailure_ReleasesReservation() {
+        createWorker("w1", WorkerState.ONLINE, 4, 8000);
+        createTask("t1", "j1", 2, 2000, TaskState.UNASSIGNED);
+
+        doThrow(new RuntimeException("Simulated STOMP failure"))
+            .when(messagingTemplate).convertAndSend(anyString(), any(MessageEnvelope.class));
+
+        schedulerService.scheduleTasks();
+
+        Task t = taskRepository.findById("t1").orElseThrow();
+        assertEquals(TaskState.UNASSIGNED, t.getState()); // Must revert to UNASSIGNED
+        assertEquals(4, resourceReservationService.getAvailableCpu("w1")); // Reservation released
+        
+        Job j = jobRepository.findById("j1").orElseThrow();
+        assertEquals(JobState.QUEUED, j.getState()); // Should remain QUEUED
+    }
+
+    @Test
+    public void testJobTransitionsToRunningOnSuccess() {
+        createWorker("w1", WorkerState.ONLINE, 4, 8000);
+        createTask("t1", "j1", 2, 2000, TaskState.UNASSIGNED);
+
+        schedulerService.scheduleTasks();
+
+        Job j = jobRepository.findById("j1").orElseThrow();
+        assertEquals(JobState.RUNNING, j.getState()); // Should transition to RUNNING
     }
 }
