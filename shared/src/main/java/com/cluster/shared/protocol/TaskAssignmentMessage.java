@@ -17,4 +17,22 @@ public class TaskAssignmentMessage {
     private int requiredCpuCores;
     private long requiredMemoryMb;
     private long timeoutSeconds;
+
+    // Distributed subtask metadata (Phase 8B)
+    private String jobId;
+    private Integer partitionId;
+    private Integer totalPartitions;
+
+    /**
+     * Backward-compatible constructor for non-partitioned task submissions.
+     */
+    public TaskAssignmentMessage(String taskId, String taskType, Map<String, Object> input,
+                                 int requiredCpuCores, long requiredMemoryMb, long timeoutSeconds) {
+        this.taskId = taskId;
+        this.taskType = taskType;
+        this.input = input;
+        this.requiredCpuCores = requiredCpuCores;
+        this.requiredMemoryMb = requiredMemoryMb;
+        this.timeoutSeconds = timeoutSeconds;
+    }
 }

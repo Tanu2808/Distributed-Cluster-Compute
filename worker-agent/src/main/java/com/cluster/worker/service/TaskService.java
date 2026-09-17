@@ -156,6 +156,9 @@ public class TaskService {
         task.setTimeoutSeconds(assignment.getTimeoutSeconds() > 0 ? 
                                assignment.getTimeoutSeconds() : 
                                config.getExecution().getDefaultTimeoutSeconds());
+        task.setJobId(assignment.getJobId());
+        task.setPartitionId(assignment.getPartitionId());
+        task.setTotalPartitions(assignment.getTotalPartitions());
         task.setState(TaskState.VALIDATING);
 
         WorkerTask existing = allTasks.putIfAbsent(taskId, task);
@@ -417,13 +420,15 @@ public class TaskService {
             duration = Math.max(0L, Duration.between(task.getReceivedAt(), task.getCompletedAt()).toMillis());
         }
 
-        TaskResultMessage resultMsg = new TaskResultMessage(
-                task.getTaskId(),
-                task.getState().name(),
-                task.getResult(),
-                duration,
-                task.getErrorMessage()
-        );
+        TaskResultMessage resultMsg = TaskResultMessage.builder()
+                .taskId(task.getTaskId())
+                .status(task.getState().name())
+                .result(task.getResult())
+                .executionDurationMs(duration)
+                .error(task.getErrorMessage())
+                .jobId(task.getJobId())
+                .partitionId(task.getPartitionId())
+                .build();
         MessageEnvelope<TaskResultMessage> env = MessageEnvelope.<TaskResultMessage>builder()
                 .type(MessageType.TASK_RESULT)
                 .workerId(configStore != null ? configStore.getWorkerId() : "unknown")

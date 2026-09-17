@@ -1,6 +1,8 @@
 package com.cluster.worker.service;
 
+import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.TaskAssignmentMessage;
+import com.cluster.shared.protocol.TaskResultMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
 import com.cluster.worker.model.ExecutionState;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -22,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,6 +35,7 @@ class TaskServiceTest {
     private WorkerStateManager stateManager;
     private ResourceAdmissionService admissionService;
     private TaskHandlerRegistry handlerRegistry;
+    private TaskService taskService;
 
     @Mock
     private SystemMetricsProvider metricsProvider;
@@ -39,14 +44,12 @@ class TaskServiceTest {
     @Mock
     private WorkerConfigurationStore configStore;
 
-    private TaskService taskService;
-
     @BeforeEach
     void setUp() {
         config = new WorkerConfig();
         WorkerConfig.Execution execConfig = new WorkerConfig.Execution();
         execConfig.setMaxConcurrentTasks(2);
-        execConfig.setQueueCapacity(5);
+        execConfig.setQueueCapacity(2);
         execConfig.setDefaultTimeoutSeconds(10);
         execConfig.setReservedMemoryMb(256);
         execConfig.setReservedCpuCores(1);
@@ -61,8 +64,8 @@ class TaskServiceTest {
         lenient().when(metricsProvider.collectMetrics()).thenReturn(metrics);
         lenient().when(configStore.getWorkerId()).thenReturn("test-worker-1");
 
-        // Register default COMPUTE handler
-        handlerRegistry = new TaskHandlerRegistry(List.of(new ComputeTaskHandler()));
+        // Register default COMPUTE and SUM_RANGE handlers
+        handlerRegistry = new TaskHandlerRegistry(List.of(new ComputeTaskHandler(), new SumRangeTaskHandler()));
 
         taskService = new TaskService(
                 config,
@@ -389,5 +392,181 @@ class TaskServiceTest {
 
         // Resources must be released
         assertEquals(0, admissionService.getAllocatedMemoryMb());
+    }
+
+    @Test
+    void testSumRangeLifecycleAndResultMetadataPropagation() throws InterruptedException {
+        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
+                .taskId("sum-range-task-1")
+                .taskType("SUM_RANGE")
+                .input(Map.of("start", 1, "end", 100))
+                .requiredCpuCores(1)
+                .requiredMemoryMb(128)
+                .timeoutSeconds(5)
+                .jobId("job-distributed-99")
+                .partitionId(2)
+                .totalPartitions(5)
+                .build();
+
+        taskService.submitTask(assignment);
+
+        WorkerTask task = null;
+        for (int i = 0; i < 30; i++) {
+            task = taskService.getTask("sum-range-task-1").orElse(null);
+            if (task != null && task.getState() == TaskState.COMPLETED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+
+        assertNotNull(task);
+        assertEquals(TaskState.COMPLETED, task.getState());
+        assertEquals(5050L, task.getResult());
+        assertEquals("job-distributed-99", task.getJobId());
+        assertEquals(2, task.getPartitionId());
+        assertEquals(5, task.getTotalPartitions());
+        assertFalse(admissionService.hasReservation("sum-range-task-1"));
+
+        // Verify result message sent over WebSocket with proper metadata
+        ArgumentCaptor<MessageEnvelope> captor = ArgumentCaptor.forClass(MessageEnvelope.class);
+        verify(connectionManager, atLeastOnce()).sendMessage(eq("/app/worker.task.result"), captor.capture());
+
+        TaskResultMessage resultMsg = (TaskResultMessage) captor.getValue().getPayload();
+        assertEquals("sum-range-task-1", resultMsg.getTaskId());
+        assertEquals("COMPLETED", resultMsg.getStatus());
+        assertEquals(5050L, resultMsg.getResult());
+        assertEquals("job-distributed-99", resultMsg.getJobId());
+        assertEquals(2, resultMsg.getPartitionId());
+        assertNull(resultMsg.getError());
+    }
+
+    @Test
+    void testSumRange1ToMillionComputesCorrectly() throws InterruptedException {
+        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
+                .taskId("sum-range-million")
+                .taskType("SUM_RANGE")
+                .input(Map.of("start", 1, "end", 1_000_000))
+                .requiredCpuCores(1)
+                .requiredMemoryMb(128)
+                .timeoutSeconds(10)
+                .build();
+
+        taskService.submitTask(assignment);
+
+        WorkerTask task = null;
+        for (int i = 0; i < 30; i++) {
+            task = taskService.getTask("sum-range-million").orElse(null);
+            if (task != null && task.getState() == TaskState.COMPLETED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+
+        assertNotNull(task);
+        assertEquals(TaskState.COMPLETED, task.getState());
+        assertEquals(500000500000L, task.getResult());
+        assertFalse(admissionService.hasReservation("sum-range-million"));
+    }
+
+    @Test
+    void testSumRangeInvalidInputFailsAndReleasesResources() throws InterruptedException {
+        // start > end (invalid input)
+        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
+                .taskId("sum-invalid-range")
+                .taskType("SUM_RANGE")
+                .input(Map.of("start", 100, "end", 10))
+                .requiredCpuCores(1)
+                .requiredMemoryMb(128)
+                .timeoutSeconds(5)
+                .jobId("job-err-1")
+                .partitionId(0)
+                .build();
+
+        taskService.submitTask(assignment);
+
+        WorkerTask task = null;
+        for (int i = 0; i < 30; i++) {
+            task = taskService.getTask("sum-invalid-range").orElse(null);
+            if (task != null && task.getState() == TaskState.FAILED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+
+        assertNotNull(task);
+        assertEquals(TaskState.FAILED, task.getState());
+        assertNotNull(task.getErrorMessage());
+        assertTrue(task.getErrorMessage().contains("must be less than or equal to end"));
+        assertFalse(admissionService.hasReservation("sum-invalid-range"));
+
+        // Verify result message sent with FAILED status and error
+        ArgumentCaptor<MessageEnvelope> captor = ArgumentCaptor.forClass(MessageEnvelope.class);
+        verify(connectionManager, atLeastOnce()).sendMessage(eq("/app/worker.task.result"), captor.capture());
+
+        TaskResultMessage resultMsg = (TaskResultMessage) captor.getValue().getPayload();
+        assertEquals("sum-invalid-range", resultMsg.getTaskId());
+        assertEquals("FAILED", resultMsg.getStatus());
+        assertNull(resultMsg.getResult());
+        assertTrue(resultMsg.getError().contains("must be less than or equal to end"));
+        assertEquals("job-err-1", resultMsg.getJobId());
+        assertEquals(0, resultMsg.getPartitionId());
+    }
+
+    @Test
+    void testSumRangeMissingFieldFailsWithoutDefaulting() throws InterruptedException {
+        // Missing start field completely
+        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
+                .taskId("sum-missing-field")
+                .taskType("SUM_RANGE")
+                .input(Map.of("end", 100))
+                .requiredCpuCores(1)
+                .requiredMemoryMb(128)
+                .timeoutSeconds(5)
+                .build();
+
+        taskService.submitTask(assignment);
+
+        WorkerTask task = null;
+        for (int i = 0; i < 30; i++) {
+            task = taskService.getTask("sum-missing-field").orElse(null);
+            if (task != null && task.getState() == TaskState.FAILED) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+
+        assertNotNull(task);
+        assertEquals(TaskState.FAILED, task.getState());
+        assertTrue(task.getErrorMessage().contains("Missing required parameter: start"));
+        assertFalse(admissionService.hasReservation("sum-missing-field"));
+    }
+
+    @Test
+    void testSumRangeCancellationWhileRunning() throws InterruptedException {
+        // Large range so it has work to do while we trigger cancel
+        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
+                .taskId("sum-cancel-task")
+                .taskType("SUM_RANGE")
+                .input(Map.of("start", 1, "end", 50_000_000))
+                .requiredCpuCores(1)
+                .requiredMemoryMb(128)
+                .timeoutSeconds(10)
+                .build();
+
+        taskService.submitTask(assignment);
+
+        // Cancel immediately or after short delay
+        Thread.sleep(2);
+        boolean cancelled = taskService.cancelTask("sum-cancel-task");
+        assertTrue(cancelled);
+
+        WorkerTask task = taskService.getTask("sum-cancel-task").orElse(null);
+        assertNotNull(task);
+        assertEquals(TaskState.CANCELLED, task.getState());
+        assertFalse(admissionService.hasReservation("sum-cancel-task"));
+
+        // Wait to verify terminal state CANCELLED is never overwritten
+        Thread.sleep(200);
+        assertEquals(TaskState.CANCELLED, task.getState());
     }
 }

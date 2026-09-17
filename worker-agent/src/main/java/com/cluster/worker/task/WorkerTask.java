@@ -12,6 +12,11 @@ public class WorkerTask {
     private int requiredCpuCores;
     private long requiredMemoryMb;
     private long timeoutSeconds;
+
+    // Distributed partitioning metadata (Phase 8B)
+    private String jobId;
+    private Integer partitionId;
+    private Integer totalPartitions;
     
     // State tracking
     private TaskState state;
@@ -151,5 +156,29 @@ public class WorkerTask {
 
     public synchronized void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public synchronized String getJobId() {
+        return jobId;
+    }
+
+    public synchronized void setJobId(String jobId) {
+        this.jobId = jobId;
+    }
+
+    public synchronized Integer getPartitionId() {
+        return partitionId;
+    }
+
+    public synchronized void setPartitionId(Integer partitionId) {
+        this.partitionId = partitionId;
+    }
+
+    public synchronized Integer getTotalPartitions() {
+        return totalPartitions;
+    }
+
+    public synchronized void setTotalPartitions(Integer totalPartitions) {
+        this.totalPartitions = totalPartitions;
     }
 }
