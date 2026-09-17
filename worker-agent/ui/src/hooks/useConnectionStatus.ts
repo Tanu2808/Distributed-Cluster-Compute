@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { connectionApi } from '../services/connectionApi';
 import type { ConnectionDiagnosticsResponse } from '../types';
 
 export function useConnectionStatus(pollingIntervalMs = 5000) {
   const [connection, setConnection] = useState<ConnectionDiagnosticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchStatus = async () => {
+    const poll = async () => {
       try {
         const res = await connectionApi.getStatus();
         if (mounted) {
@@ -20,23 +21,16 @@ export function useConnectionStatus(pollingIntervalMs = 5000) {
       } catch (err) {
         if (mounted) {
           setError(err instanceof Error ? err.message : 'Failed to fetch connection status');
-          setConnection({
-            connectionState: 'DISCONNECTED',
-            coordinatorUrl: '',
-            connectedSince: null,
-            lastSuccessfulHeartbeat: null,
-            lastMessageTimestamp: null,
-            reconnectCount: 0,
-            lastConnectionError: err instanceof Error ? err.message : 'Unknown error'
-          });
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchStatus();
-    const intervalId = setInterval(fetchStatus, pollingIntervalMs);
+    poll();
+    const intervalId = setInterval(poll, pollingIntervalMs);
 
     return () => {
       mounted = false;
@@ -44,5 +38,19 @@ export function useConnectionStatus(pollingIntervalMs = 5000) {
     };
   }, [pollingIntervalMs]);
 
-  return { connection, loading, error };
+  const refetch = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const res = await connectionApi.getStatus();
+      setConnection(res);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch connection status');
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  }, []);
+
+  return { connection, loading, refreshing, error, refetch };
 }

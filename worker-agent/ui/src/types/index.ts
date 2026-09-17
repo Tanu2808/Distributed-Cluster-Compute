@@ -1,7 +1,37 @@
+export type WorkerLifecycleState =
+  | 'STARTING'
+  | 'INITIALIZING'
+  | 'SETUP_REQUIRED'
+  | 'LOADING_CONFIGURATION'
+  | 'CONFIGURED'
+  | 'STOPPING';
+
+export type ConnectionState =
+  | 'DISCONNECTED'
+  | 'CONNECTING'
+  | 'REGISTERING'
+  | 'ONLINE'
+  | 'RECONNECTING';
+
+export type ExecutionState =
+  | 'OFFLINE'
+  | 'IDLE'
+  | 'BUSY';
+
+export type TaskState =
+  | 'RECEIVED'
+  | 'VALIDATING'
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
 export interface WorkerStatusResponse {
-  lifecycleState?: string;
-  connectionState?: string;
-  executionState?: string;
+  lifecycleState?: WorkerLifecycleState | string;
+  connectionState?: ConnectionState | string;
+  executionState?: ExecutionState | string;
   status: string;
 }
 
@@ -10,7 +40,7 @@ export interface WorkerInfoResponse {
 }
 
 export interface ConnectionDiagnosticsResponse {
-  connectionState: string;
+  connectionState: ConnectionState | string;
   coordinatorUrl: string;
   connectedSince: string | null;
   lastSuccessfulHeartbeat: string | null;
@@ -19,8 +49,23 @@ export interface ConnectionDiagnosticsResponse {
   lastConnectionError: string | null;
 }
 
+export interface WorkerTask {
+  taskId: string;
+  taskType: string;
+  input?: Record<string, unknown>;
+  requiredCpuCores: number;
+  requiredMemoryMb: number;
+  timeoutSeconds: number;
+  state: TaskState;
+  errorMessage?: string | null;
+  result?: unknown;
+  receivedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 export interface ActiveTasksResponse {
-  tasks: unknown[];
+  tasks: WorkerTask[];
 }
 
 export interface WorkerSettingsResponse {
@@ -29,8 +74,8 @@ export interface WorkerSettingsResponse {
 }
 
 export interface ClusterEnrollmentResponse {
-  workerId: string;
-  status: 'PENDING' | 'REGISTERED' | 'FAILED';
+  workerId: string | null;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED' | string;
   message?: string;
 }
 

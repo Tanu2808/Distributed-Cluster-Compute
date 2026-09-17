@@ -1,229 +1,477 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowRight, Check, Copy, RefreshCw, KeyRound, ServerPlus } from 'lucide-react';
 import { clusterApi } from '../services/clusterApi';
-import { useNavigate } from 'react-router-dom';
+import { useSettings } from '../hooks/useSettings';
+import { useWorkerStatus } from '../hooks/useWorkerStatus';
+import {
+  ConsoleCard,
+  KeyValueTable,
+  StatusBadge,
+  AlertBanner,
+  Skeleton,
+} from '../components';
+
+type SetupMode = 'JOIN' | 'CREATE';
 
 export default function Setup() {
-  const [mode, setMode] = useState<'SELECT' | 'JOIN' | 'CREATE'>('SELECT');
-  
-  // Join state
+  const navigate = useNavigate();
+  const { clusterSettings, loading: settingsLoading, refetch: refetchSettings } = useSettings();
+  const { status, info } = useWorkerStatus(5000);
+
+  const [mode, setMode] = useState<SetupMode>('JOIN');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Form State
   const [joinCode, setJoinCode] = useState('');
-  
-  // Create state
   const [clusterName, setClusterName] = useState('');
   const [isLocal, setIsLocal] = useState(true);
 
-  const [loading, setLoading] = useState(false);
+  // Status & Validation State
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ joinCode?: string; clusterName?: string }>({});
 
-  const navigate = useNavigate();
+  const isConfigured = clusterSettings?.isConfigured || status?.lifecycleState === 'CONFIGURED';
 
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleCopy = (text: string, key: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1800);
+  };
+
+  const validateJoin = (): boolean => {
+    const errors: { joinCode?: string } = {};
+    const cleanCode = joinCode.replace(/[\s-]/g, '');
+    if (!joinCode.trim()) {
+      errors.joinCode = 'Join code is required.';
+    } else if (cleanCode.length !== 16 || !/^[a-zA-Z0-9]{16}$/.test(cleanCode)) {
+      errors.joinCode = 'Must be 16 alphanumeric characters (XXXX-XXXX-XXXX-XXXX).';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateCreate = (): boolean => {
+    const errors: { clusterName?: string } = {};
+    if (!clusterName.trim()) {
+      errors.clusterName = 'Cluster name is required.';
+    } else if (clusterName.trim().length < 3) {
+      errors.clusterName = 'Cluster name must be at least 3 characters.';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleJoinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!joinCode) {
-      setError('Join code is required');
-      return;
-    }
+    if (!validateJoin()) return;
 
-    setLoading(true);
-
+    setSubmitting(true);
     try {
-      const response = await clusterApi.joinCluster(joinCode);
+      const response = await clusterApi.joinCluster(joinCode.trim());
       if (response.status === 'SUCCESS') {
-        setSuccess('Successfully joined cluster!');
-        setTimeout(() => navigate('/home'), 1500);
+        setSuccess('Worker configured successfully.');
+        await refetchSettings();
+        setTimeout(() => navigate('/home'), 1200);
       } else {
-        setError(response.message || 'Failed to join cluster');
+        setError(response.message || 'Unable to complete worker setup.');
       }
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to join cluster');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to complete worker setup.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);
 
-    if (!clusterName) {
-      setError('Cluster name is required');
-      return;
-    }
+    if (!validateCreate()) return;
 
-    setLoading(true);
-
+    setSubmitting(true);
     try {
-      await clusterApi.createCluster(clusterName, isLocal);
-      setSuccess('Successfully created cluster! Configuration saved.');
-      setTimeout(() => navigate('/home'), 1500);
-    } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to create cluster');
+      await clusterApi.createCluster(clusterName.trim(), isLocal);
+      setSuccess('Worker configured successfully.');
+      await refetchSettings();
+      setTimeout(() => navigate('/home'), 1200);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to complete worker setup.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  if (mode === 'SELECT') {
+  // Initial Loading Skeleton
+  if (settingsLoading && !clusterSettings) {
     return (
-      <div className="max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-worker-text tracking-tight">CLUSTER COMPUTE</h1>
-          <p className="text-worker-muted text-lg">Turn this computer into part of a distributed compute cluster.</p>
+      <div className="space-y-4 max-w-3xl mx-auto">
+        <div className="space-y-1 pb-2 border-b border-console-border">
+          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-4 w-72" />
         </div>
-        
-        <div className="flex gap-6 mt-8">
-          <button 
-            onClick={() => setMode('CREATE')}
-            className="px-8 py-4 bg-worker-card border border-worker-border hover:border-worker-primary hover:bg-worker-primary/5 rounded-xl flex flex-col items-center transition-all group"
-          >
-            <span className="text-xl font-semibold mb-2 group-hover:text-worker-primary">Create a Cluster</span>
-            <span className="text-sm text-worker-muted text-center max-w-[200px]">Start a new cluster and make this node the first member.</span>
-          </button>
-
-          <button 
-            onClick={() => setMode('JOIN')}
-            className="px-8 py-4 bg-worker-card border border-worker-border hover:border-worker-primary hover:bg-worker-primary/5 rounded-xl flex flex-col items-center transition-all group"
-          >
-            <span className="text-xl font-semibold mb-2 group-hover:text-worker-primary">Join a Cluster</span>
-            <span className="text-sm text-worker-muted text-center max-w-[200px]">Use a join code to add this node to an existing cluster.</span>
-          </button>
-        </div>
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-8">
-      <div>
-        <button onClick={() => { setMode('SELECT'); setError(null); setSuccess(null); }} className="text-sm text-worker-primary hover:underline mb-4 flex items-center">
-          ← Back to selection
-        </button>
-        <h1 className="text-2xl font-bold">{mode === 'JOIN' ? 'Join Cluster' : 'Create Cluster'}</h1>
-        <p className="text-worker-muted mt-1">
-          {mode === 'JOIN' ? 'Enter your 16-character cluster join code below.' : 'Configure your new distributed compute cluster.'}
-        </p>
-      </div>
-      
-      {mode === 'JOIN' ? (
-        <form onSubmit={handleJoin} className="bg-worker-card border border-worker-border rounded-lg p-6 space-y-6">
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-sm text-red-400">
-              {error}
+  // 1. If Already Configured View
+  if (isConfigured) {
+    return (
+      <div className="space-y-4 max-w-3xl mx-auto">
+        {/* Header */}
+        <div className="flex items-start sm:items-center justify-between gap-4 pb-2.5 border-b border-console-border">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-base font-semibold tracking-tight text-console-text">
+                Worker Setup
+              </h1>
+              <StatusBadge status="CONFIGURED" label="Worker configured" />
             </div>
-          )}
-          {success && (
-            <div className="p-3 bg-green-500/10 border border-green-500/30 rounded text-sm text-green-400">
-              {success}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-worker-muted mb-1">Cluster Code</label>
-              <input 
-                type="text" 
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value)}
-                className="w-full bg-worker-bg border border-worker-border rounded p-3 text-lg font-mono focus:border-worker-primary focus:outline-none placeholder:opacity-50" 
-                placeholder="XXXX-XXXX-XXXX-XXXX" 
-                disabled={loading}
-              />
-            </div>
+            <p className="text-[11px] text-console-textDim mt-0.5">
+              This worker node is already enrolled in a cluster
+            </p>
           </div>
-          
-          <div className="flex justify-end pt-4 border-t border-worker-border">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className={`px-6 py-2 rounded font-medium transition-colors ${
-                loading 
-                  ? 'bg-worker-primary/50 text-white/70 cursor-not-allowed'
-                  : 'bg-worker-primary hover:bg-worker-primaryHover text-white'
-              }`}
+
+          <Link
+            to="/home"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-console-accent hover:bg-console-accentHover rounded-sm transition-colors shadow-sm"
+          >
+            <span>Open Worker Overview</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Configuration Summary Card */}
+        <ConsoleCard title="Current Enrollment Configuration">
+          <KeyValueTable
+            columns={1}
+            items={[
+              {
+                label: 'Worker ID',
+                mono: true,
+                value: info?.workerId ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(info.workerId, 'workerId')}
+                    className="inline-flex items-center gap-1.5 hover:text-console-accent text-console-text transition-colors text-left"
+                    title="Click to copy Worker ID"
+                  >
+                    <span className="truncate max-w-[240px] sm:max-w-[400px]">
+                      {info.workerId}
+                    </span>
+                    {copiedKey === 'workerId' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-console-textDim hover:text-console-text shrink-0" />
+                    )}
+                  </button>
+                ) : (
+                  'Unavailable'
+                ),
+              },
+              {
+                label: 'Cluster Name',
+                value: clusterSettings?.clusterName || 'Not configured',
+              },
+              {
+                label: 'Cluster ID',
+                mono: true,
+                value: clusterSettings?.clusterId ? (
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(clusterSettings.clusterId, 'clusterId')}
+                    className="inline-flex items-center gap-1.5 hover:text-console-accent text-console-text transition-colors text-left"
+                    title="Click to copy Cluster ID"
+                  >
+                    <span className="truncate max-w-[240px] sm:max-w-[400px]">
+                      {clusterSettings.clusterId}
+                    </span>
+                    {copiedKey === 'clusterId' ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-console-textDim hover:text-console-text shrink-0" />
+                    )}
+                  </button>
+                ) : (
+                  'Not configured'
+                ),
+              },
+              {
+                label: 'Coordinator URL',
+                mono: true,
+                value: clusterSettings?.coordinatorUrl || 'Not configured',
+              },
+              {
+                label: 'Enrollment Status',
+                value: <StatusBadge status="CONFIGURED" label="Configured" />,
+              },
+            ]}
+          />
+
+          <div className="mt-4 pt-3 border-t border-console-borderSubtle flex items-center justify-between text-xs text-console-textDim">
+            <span>To modify cluster parameters or disconnect, visit settings.</span>
+            <Link
+              to="/settings"
+              className="text-console-accent hover:text-console-accentHover font-medium inline-flex items-center gap-1"
             >
-              {loading ? 'Connecting...' : 'Connect'}
-            </button>
+              <span>Manage in Settings</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-        </form>
-      ) : (
-        <form onSubmit={handleCreate} className="bg-worker-card border border-worker-border rounded-lg p-6 space-y-6">
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-sm text-red-400">
-              {error}
+        </ConsoleCard>
+      </div>
+    );
+  }
+
+  // 2. Unconfigured Worker Setup View
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Page Header */}
+      <div className="flex items-start sm:items-center justify-between gap-4 pb-2.5 border-b border-console-border">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-base font-semibold tracking-tight text-console-text">
+              Worker Setup
+            </h1>
+            <StatusBadge status="SETUP_REQUIRED" label="Setup required" />
+          </div>
+          <p className="text-[11px] text-console-textDim mt-0.5">
+            Configure this worker for cluster operation
+          </p>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {success && (
+        <AlertBanner type="success" message={success} />
+      )}
+
+      {error && (
+        <AlertBanner
+          type="error"
+          message={
+            <div className="flex items-center justify-between gap-4">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="underline hover:text-console-accent text-rose-800 shrink-0 font-sans font-medium"
+              >
+                Dismiss
+              </button>
             </div>
-          )}
-          {success && (
-            <div className="p-3 bg-green-500/10 border border-green-500/30 rounded text-sm text-green-400">
-              {success}
-            </div>
-          )}
-          
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-worker-muted mb-1">Cluster Name</label>
-              <input 
-                type="text" 
-                value={clusterName}
-                onChange={(e) => setClusterName(e.target.value)}
-                className="w-full bg-worker-bg border border-worker-border rounded p-2 focus:border-worker-primary focus:outline-none" 
-                placeholder="My Compute Cluster" 
-                disabled={loading}
+          }
+        />
+      )}
+
+      {/* Mode Selector Segmented Control */}
+      <div className="grid grid-cols-2 p-1 bg-slate-100 border border-console-border rounded-sm gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            setMode('JOIN');
+            setError(null);
+            setFieldErrors({});
+          }}
+          disabled={submitting}
+          className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-sm transition-colors ${
+            mode === 'JOIN'
+              ? 'bg-white text-console-accent border border-slate-300 shadow-sm font-semibold'
+              : 'text-console-textMuted hover:text-console-text hover:bg-slate-200/60 border border-transparent'
+          }`}
+        >
+          <KeyRound className="w-3.5 h-3.5" />
+          <span>Join Cluster</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode('CREATE');
+            setError(null);
+            setFieldErrors({});
+          }}
+          disabled={submitting}
+          className={`flex items-center justify-center gap-2 py-2 px-3 text-xs font-medium rounded-sm transition-colors ${
+            mode === 'CREATE'
+              ? 'bg-white text-console-accent border border-slate-300 shadow-sm font-semibold'
+              : 'text-console-textMuted hover:text-console-text hover:bg-slate-200/60 border border-transparent'
+          }`}
+        >
+          <ServerPlus className="w-3.5 h-3.5" />
+          <span>Create Cluster</span>
+        </button>
+      </div>
+
+      {/* Configuration Form Panel */}
+      {mode === 'JOIN' ? (
+        <ConsoleCard
+          title="Join Cluster"
+          subtitle="Enroll this worker using a cluster join code"
+        >
+          <form onSubmit={handleJoinSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="joinCode" className="block text-xs font-medium text-console-text">
+                Cluster Join Code
+              </label>
+              <input
+                id="joinCode"
+                type="text"
+                value={joinCode}
+                onChange={(e) => {
+                  setJoinCode(e.target.value.toUpperCase());
+                  if (fieldErrors.joinCode) setFieldErrors({ ...fieldErrors, joinCode: undefined });
+                }}
+                disabled={submitting}
+                placeholder="XXXX-XXXX-XXXX-XXXX"
+                className={`w-full px-3 py-2 text-xs font-mono bg-white border rounded-sm text-console-text placeholder:text-console-textDim focus:outline-none transition-colors ${
+                  fieldErrors.joinCode
+                    ? 'border-rose-500 focus:border-rose-600'
+                    : 'border-console-border focus:border-console-accent'
+                }`}
               />
+              {fieldErrors.joinCode ? (
+                <p className="text-[11px] text-rose-700 font-medium">
+                  {fieldErrors.joinCode}
+                </p>
+              ) : (
+                <p className="text-[11px] text-console-textDim">
+                  16-character alphanumeric authorization code provided by the coordinator.
+                </p>
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-worker-muted mb-3">Coordinator Selection</label>
-              <div className="space-y-3">
-                <label className="flex items-center space-x-3 p-3 border border-worker-border rounded hover:bg-worker-border/30 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="coordinator"
-                    checked={isLocal} 
+            <div className="pt-3 border-t border-console-border flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-console-accent hover:bg-console-accentHover disabled:opacity-50 rounded-sm transition-colors"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Connecting...</span>
+                  </>
+                ) : (
+                  <span>Join Cluster</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </ConsoleCard>
+      ) : (
+        <ConsoleCard
+          title="Create Cluster"
+          subtitle="Initialize a new cluster with this node as the first member"
+        >
+          <form onSubmit={handleCreateSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="clusterName" className="block text-xs font-medium text-console-text">
+                Cluster Name
+              </label>
+              <input
+                id="clusterName"
+                type="text"
+                value={clusterName}
+                onChange={(e) => {
+                  setClusterName(e.target.value);
+                  if (fieldErrors.clusterName) setFieldErrors({ ...fieldErrors, clusterName: undefined });
+                }}
+                disabled={submitting}
+                placeholder="e.g. Production-Compute-Cluster"
+                className={`w-full px-3 py-2 text-xs bg-white border rounded-sm text-console-text placeholder:text-console-textDim focus:outline-none transition-colors ${
+                  fieldErrors.clusterName
+                    ? 'border-rose-500 focus:border-rose-600'
+                    : 'border-console-border focus:border-console-accent'
+                }`}
+              />
+              {fieldErrors.clusterName && (
+                <p className="text-[11px] text-rose-700 font-medium">
+                  {fieldErrors.clusterName}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <span className="block text-xs font-medium text-console-text">
+                Coordinator Deployment
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <label
+                  className={`flex items-start gap-2.5 p-2.5 border rounded-sm cursor-pointer transition-colors ${
+                    isLocal
+                      ? 'bg-blue-50/60 border-console-accent'
+                      : 'bg-white border-console-border hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="coordinatorDeployment"
+                    checked={isLocal}
                     onChange={() => setIsLocal(true)}
-                    className="text-worker-primary bg-worker-bg border-worker-border focus:ring-worker-primary focus:ring-offset-worker-bg"
+                    disabled={submitting}
+                    className="mt-0.5 text-console-accent focus:ring-console-accent"
                   />
-                  <div>
-                    <div className="font-medium text-worker-text text-sm">This computer</div>
-                    <div className="text-xs text-worker-muted">Provision a new coordinator node locally.</div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-console-text block">Local Node</span>
+                    <span className="text-[11px] text-console-textDim block">
+                      Run coordinator locally on this computer
+                    </span>
                   </div>
                 </label>
-                <label className="flex items-center space-x-3 p-3 border border-worker-border rounded hover:bg-worker-border/30 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    name="coordinator"
-                    checked={!isLocal} 
+
+                <label
+                  className={`flex items-start gap-2.5 p-2.5 border rounded-sm cursor-pointer transition-colors ${
+                    !isLocal
+                      ? 'bg-blue-50/60 border-console-accent'
+                      : 'bg-white border-console-border hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="coordinatorDeployment"
+                    checked={!isLocal}
                     onChange={() => setIsLocal(false)}
-                    className="text-worker-primary bg-worker-bg border-worker-border focus:ring-worker-primary focus:ring-offset-worker-bg"
+                    disabled={submitting}
+                    className="mt-0.5 text-console-accent focus:ring-console-accent"
                   />
-                  <div>
-                    <div className="font-medium text-worker-text text-sm">Existing server</div>
-                    <div className="text-xs text-worker-muted">Connect to an already running coordinator.</div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-medium text-console-text block">Remote Server</span>
+                    <span className="text-[11px] text-console-textDim block">
+                      Connect to an existing standalone coordinator
+                    </span>
                   </div>
                 </label>
               </div>
             </div>
-          </div>
-          
-          <div className="flex justify-end pt-4 border-t border-worker-border">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className={`px-6 py-2 rounded font-medium transition-colors ${
-                loading 
-                  ? 'bg-worker-primary/50 text-white/70 cursor-not-allowed'
-                  : 'bg-worker-primary hover:bg-worker-primaryHover text-white'
-              }`}
-            >
-              {loading ? 'Creating...' : 'Create'}
-            </button>
-          </div>
-        </form>
+
+            <div className="pt-3 border-t border-console-border flex items-center justify-end">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-console-accent hover:bg-console-accentHover disabled:opacity-50 rounded-sm transition-colors"
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Creating...</span>
+                  </>
+                ) : (
+                  <span>Create Cluster</span>
+                )}
+              </button>
+            </div>
+          </form>
+        </ConsoleCard>
       )}
     </div>
-  )
+  );
 }

@@ -4,6 +4,29 @@
 
 @layer base {
   body {
-    @apply bg-worker-bg text-worker-text antialiased min-h-screen;
+    @apply bg-console-bg text-console-text antialiased min-h-screen selection:bg-blue-100 selection:text-blue-900;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Compact form controls for technical consoles */
+  input, select, textarea {
+    @apply bg-white border border-console-border text-console-text text-sm rounded-sm focus:outline-none focus:border-console-accent focus:ring-1 focus:ring-console-accent;
   }
 }
+
+/* Compact technical scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f7f8fa;
+}
+::-webkit-scrollbar-thumb {
+  background: #d5dbdb;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #aab7b8;
+}
+
