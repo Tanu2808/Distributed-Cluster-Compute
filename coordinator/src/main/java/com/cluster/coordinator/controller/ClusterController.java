@@ -1,41 +1,44 @@
 package com.cluster.coordinator.controller;
 
-import com.cluster.coordinator.dto.ClusterResourcesResponse;
-import com.cluster.coordinator.model.ClusterEvent;
-import com.cluster.coordinator.service.ClusterService;
-import com.cluster.coordinator.service.EventService;
+import com.cluster.coordinator.service.cluster.ClusterEnrollmentService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cluster")
 public class ClusterController {
 
-    private final ClusterService clusterService;
-    private final EventService eventService;
+    private final ClusterEnrollmentService enrollmentService;
 
-    public ClusterController(ClusterService clusterService, EventService eventService) {
-        this.clusterService = clusterService;
-        this.eventService = eventService;
+    public ClusterController(ClusterEnrollmentService enrollmentService) {
+        this.enrollmentService = enrollmentService;
     }
 
-    @GetMapping
-    public ResponseEntity<Map<String, String>> getClusterStatus() {
-        return ResponseEntity.ok(Map.of("status", "ONLINE", "version", "1.0.0"));
+    @GetMapping("/join-code")
+    public ResponseEntity<Map<String, String>> getJoinCode() {
+        return ResponseEntity.ok(Map.of("joinCode", enrollmentService.getJoinCode()));
     }
 
-    @GetMapping("/resources")
-    public ResponseEntity<ClusterResourcesResponse> getClusterResources() {
-        return ResponseEntity.ok(clusterService.getAggregateResources());
+    @PostMapping("/join-code/rotate")
+    public ResponseEntity<Map<String, String>> rotateJoinCode() {
+        return ResponseEntity.ok(Map.of("joinCode", enrollmentService.rotateJoinCode()));
     }
 
-    @GetMapping("/events")
-    public ResponseEntity<List<ClusterEvent>> getClusterEvents() {
-        return ResponseEntity.ok(eventService.getRecentEvents());
+    @PostMapping("/enroll")
+    public ResponseEntity<Map<String, String>> enrollWorker(@RequestBody Map<String, String> payload) {
+        String joinCode = payload.get("joinCode");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker(joinCode);
+        
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(Map.of(
+                    "clusterId", result.getClusterId(),
+                    "coordinatorUrl", result.getCoordinatorUrl()
+            ));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 }
