@@ -1,4 +1,4 @@
-# Worker Agent
+# Worker Agent Overview
 
 The Worker Agent is a lightweight daemon that runs on participating compute nodes (Slaves) within the Distributed Compute Cluster. It supplies computational resources to the cluster and awaits execution instructions from the Coordinator.
 
