@@ -7,7 +7,12 @@ import com.cluster.worker.model.cluster.JoinCode;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.service.WorkerStateManager;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
 
 @Service
 public class ClusterSetupService {
@@ -27,14 +32,42 @@ public class ClusterSetupService {
         this.stateManager = stateManager;
     }
 
+    @Value("${worker.coordinator.url:http://localhost:8080}")
+    private String defaultCoordinatorUrl;
+
     /**
      * Attempts to join an existing cluster using a join code.
-     * Note: "Coordinator enrollment unavailable" is returned because the coordinator API doesn't exist yet.
      */
     public ClusterEnrollment joinCluster(JoinCode joinCode) {
-        // Implementation for phase 3: we do not fake success.
-        // We simulate a failure since the API isn't there yet.
-        return new ClusterEnrollment(null, ClusterEnrollment.Status.FAILED, "Coordinator enrollment unavailable");
+        RestTemplate restTemplate = new RestTemplate();
+        String enrollUrl = defaultCoordinatorUrl + "/api/cluster/enroll";
+
+        try {
+            Map<String, String> requestBody = Map.of("joinCode", joinCode.getCode());
+            ResponseEntity<Map> response = restTemplate.postForEntity(enrollUrl, requestBody, Map.class);
+            
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                String clusterId = (String) response.getBody().get("clusterId");
+                String returnedCoordinatorUrl = (String) response.getBody().get("coordinatorUrl");
+
+                // Persist Configuration
+                var storedConfig = configStore.getConfig();
+                storedConfig.setClusterName(clusterId);
+                storedConfig.setClusterId(clusterId);
+                storedConfig.setCoordinatorUrl(returnedCoordinatorUrl != null ? returnedCoordinatorUrl : defaultCoordinatorUrl);
+                storedConfig.setEnrollmentCredential(joinCode.getCode());
+                configStore.save();
+                
+                // Transition state to kick off the connection flow
+                stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+                
+                return new ClusterEnrollment(configStore.getWorkerId(), ClusterEnrollment.Status.SUCCESS, "Successfully joined cluster");
+            } else {
+                return new ClusterEnrollment(configStore.getWorkerId(), ClusterEnrollment.Status.FAILED, "Invalid join code or unauthorized");
+            }
+        } catch (Exception e) {
+            return new ClusterEnrollment(configStore.getWorkerId(), ClusterEnrollment.Status.FAILED, "Coordinator connection failed: " + e.getMessage());
+        }
     }
 
     /**

@@ -3,6 +3,9 @@ package com.cluster.coordinator.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Entity
 @Table(name = "jobs")
@@ -13,21 +16,39 @@ public class Job {
     
     private String name;
     
-    private int requiredCpu;
+    private String taskType;
     
-    private long requiredMemory;
+    @Column(columnDefinition = "TEXT")
+    private String input;
     
-    private String status;
+    private int requestedCpu;
+    
+    private long requestedMemory;
+    
+    private int totalPartitions;
+    
+    private int completedPartitions;
+    
+    @Enumerated(EnumType.STRING)
+    private JobState state;
 
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public int getRequiredCpu() { return requiredCpu; }
-    public void setRequiredCpu(int requiredCpu) { this.requiredCpu = requiredCpu; }
-    public long getRequiredMemory() { return requiredMemory; }
-    public void setRequiredMemory(long requiredMemory) { this.requiredMemory = requiredMemory; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public String getTaskType() { return taskType; }
+    public void setTaskType(String taskType) { this.taskType = taskType; }
+    public String getInput() { return input; }
+    public void setInput(String input) { this.input = input; }
+    public int getRequestedCpu() { return requestedCpu; }
+    public void setRequestedCpu(int requestedCpu) { this.requestedCpu = requestedCpu; }
+    public long getRequestedMemory() { return requestedMemory; }
+    public void setRequestedMemory(long requestedMemory) { this.requestedMemory = requestedMemory; }
+    public int getTotalPartitions() { return totalPartitions; }
+    public void setTotalPartitions(int totalPartitions) { this.totalPartitions = totalPartitions; }
+    public int getCompletedPartitions() { return completedPartitions; }
+    public void setCompletedPartitions(int completedPartitions) { this.completedPartitions = completedPartitions; }
+    public JobState getState() { return state; }
+    public void setState(JobState state) { this.state = state; }
 }

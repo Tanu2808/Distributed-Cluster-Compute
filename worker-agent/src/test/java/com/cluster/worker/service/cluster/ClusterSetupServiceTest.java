@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -36,15 +37,17 @@ class ClusterSetupServiceTest {
     @BeforeEach
     void setUp() {
         setupService = new ClusterSetupService(provisioningService, connectionResolver, configStore, stateManager);
+        ReflectionTestUtils.setField(setupService, "defaultCoordinatorUrl", "http://localhost:8080");
+        lenient().when(configStore.getWorkerId()).thenReturn("worker-1");
     }
 
     @Test
-    void testJoinClusterReturnsUnavailable() {
+    void testJoinClusterConnectionFailure() {
         JoinCode code = new JoinCode("ABCD-1234-EFGH-5678");
         ClusterEnrollment enrollment = setupService.joinCluster(code);
         
         assertEquals(ClusterEnrollment.Status.FAILED, enrollment.getStatus());
-        assertEquals("Coordinator enrollment unavailable", enrollment.getMessage());
+        assertTrue(enrollment.getMessage().startsWith("Coordinator connection failed"), "Message was: " + enrollment.getMessage());
     }
 
     @Test
