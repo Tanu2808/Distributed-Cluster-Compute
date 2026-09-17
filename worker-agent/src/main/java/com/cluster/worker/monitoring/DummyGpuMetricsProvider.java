@@ -7,6 +7,11 @@ public class DummyGpuMetricsProvider implements GpuMetricsProvider {
 
     @Override
     public int getGpuCount() {
-        return 0; // Hardware GPU detection is complex and beyond OSHI's basic capabilities without external libs
+        return 0;
+    }
+
+    @Override
+    public String getGpuInfo() {
+        return "Unavailable";
     }
 }

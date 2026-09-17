@@ -47,15 +47,22 @@ public class TaskMessageHandler implements StompFrameHandler {
                 }
             } else if (envelope.getType() == MessageType.TASK_CANCEL) {
                 try {
-                    // Expecting taskId in payload or simple Map
                     String taskId = null;
                     if (envelope.getPayload() instanceof Map) {
                         taskId = (String) ((Map<?, ?>) envelope.getPayload()).get("taskId");
                     } else if (envelope.getPayload() instanceof String) {
                         taskId = (String) envelope.getPayload();
+                    } else {
+                        com.cluster.shared.protocol.TaskCancellationMessage cancelMsg =
+                                objectMapper.convertValue(envelope.getPayload(), com.cluster.shared.protocol.TaskCancellationMessage.class);
+                        if (cancelMsg != null) {
+                            taskId = cancelMsg.getTaskId();
+                        }
                     }
-                    if (taskId != null) {
-                        taskService.cancelTask(taskId);
+                    if (taskId != null && !taskId.trim().isEmpty()) {
+                        taskService.cancelTask(taskId.trim());
+                    } else {
+                        log.warn("Received TASK_CANCEL with missing or empty taskId: {}", envelope.getPayload());
                     }
                 } catch (Exception e) {
                     log.error("Failed to parse TASK_CANCEL message", e);

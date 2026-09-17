@@ -26,23 +26,54 @@ public class OshiSystemMetricsProvider implements SystemMetricsProvider {
         this.networkMetricsProvider = networkMetricsProvider;
     }
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OshiSystemMetricsProvider.class);
+
     @Override
     public SystemMetrics collectMetrics() {
         SystemMetrics metrics = new SystemMetrics();
         
-        metrics.setCpuCores(cpuMetricsProvider.getCoreCount());
-        metrics.setCpuUsagePercent(cpuMetricsProvider.getCpuUsagePercent());
+        try {
+            metrics.setCpuCores(cpuMetricsProvider.getCoreCount());
+            metrics.setCpuUsagePercent(cpuMetricsProvider.getCpuUsagePercent());
+        } catch (Exception e) {
+            log.debug("Failed to collect CPU metrics: {}", e.getMessage());
+            metrics.setCpuCores(Runtime.getRuntime().availableProcessors());
+            metrics.setCpuUsagePercent(0.0);
+        }
         
-        metrics.setTotalMemoryMb(memoryMetricsProvider.getTotalMemoryBytes() / (1024 * 1024));
-        metrics.setUsedMemoryMb(memoryMetricsProvider.getUsedMemoryBytes() / (1024 * 1024));
+        try {
+            metrics.setTotalMemoryMb(memoryMetricsProvider.getTotalMemoryBytes() / (1024 * 1024));
+            metrics.setUsedMemoryMb(memoryMetricsProvider.getUsedMemoryBytes() / (1024 * 1024));
+        } catch (Exception e) {
+            log.debug("Failed to collect memory metrics: {}", e.getMessage());
+            metrics.setTotalMemoryMb(Runtime.getRuntime().maxMemory() / (1024 * 1024));
+            metrics.setUsedMemoryMb((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024 * 1024));
+        }
         
-        metrics.setTotalStorageMb(diskMetricsProvider.getTotalDiskBytes() / (1024 * 1024));
-        metrics.setUsedStorageMb(diskMetricsProvider.getUsedDiskBytes() / (1024 * 1024));
+        try {
+            metrics.setTotalStorageMb(diskMetricsProvider.getTotalDiskBytes() / (1024 * 1024));
+            metrics.setUsedStorageMb(diskMetricsProvider.getUsedDiskBytes() / (1024 * 1024));
+        } catch (Exception e) {
+            log.debug("Failed to collect disk metrics: {}", e.getMessage());
+            metrics.setTotalStorageMb(0);
+            metrics.setUsedStorageMb(0);
+        }
         
-        metrics.setNetworkBytesSent(networkMetricsProvider.getBytesSent());
-        metrics.setNetworkBytesReceived(networkMetricsProvider.getBytesReceived());
+        try {
+            metrics.setNetworkBytesSent(networkMetricsProvider.getBytesSent());
+            metrics.setNetworkBytesReceived(networkMetricsProvider.getBytesReceived());
+        } catch (Exception e) {
+            log.debug("Failed to collect network metrics: {}", e.getMessage());
+            metrics.setNetworkBytesSent(0);
+            metrics.setNetworkBytesReceived(0);
+        }
         
-        metrics.setGpuCount(gpuMetricsProvider.getGpuCount());
+        try {
+            metrics.setGpuCount(gpuMetricsProvider.getGpuCount());
+        } catch (Exception e) {
+            log.debug("Failed to collect GPU metrics: {}", e.getMessage());
+            metrics.setGpuCount(0);
+        }
         
         metrics.setAdditionalInfo(new HashMap<>());
         

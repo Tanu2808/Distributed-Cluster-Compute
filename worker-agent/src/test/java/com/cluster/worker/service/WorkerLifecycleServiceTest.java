@@ -73,7 +73,7 @@ class WorkerLifecycleServiceTest {
 
         service.handleDisconnection();
 
-        assertEquals(ConnectionState.DISCONNECTED, stateManager.getConnectionState()); 
+        assertEquals(ConnectionState.RECONNECTING, stateManager.getConnectionState());
     }
 
     @Test

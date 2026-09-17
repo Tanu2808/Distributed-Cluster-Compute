@@ -59,6 +59,17 @@ class WorkerStateManagerTest {
     }
 
     @Test
+    void testReconnectingTransitions() {
+        assertEquals(ConnectionState.DISCONNECTED, stateManager.getConnectionState());
+
+        stateManager.transitionConnection(ConnectionState.RECONNECTING);
+        assertEquals(ConnectionState.RECONNECTING, stateManager.getConnectionState());
+
+        stateManager.transitionConnection(ConnectionState.CONNECTING);
+        assertEquals(ConnectionState.CONNECTING, stateManager.getConnectionState());
+    }
+
+    @Test
     void testInvalidConnectionTransitionThrowsException() {
         assertThrows(IllegalStateException.class, () -> {
             stateManager.transitionConnection(ConnectionState.ONLINE);

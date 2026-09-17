@@ -16,15 +16,16 @@ public class ComputeTaskHandler implements TaskHandler {
 
     @Override
     public Object execute(WorkerTask task) throws Exception {
-        Map<String, Object> input = task.getInput();
+        if (Thread.currentThread().isInterrupted() || (task != null && task.isCancelled())) {
+            throw new InterruptedException("Task execution cancelled or interrupted before start");
+        }
+
+        Map<String, Object> input = task != null ? task.getInput() : null;
         if (input == null) {
             throw new IllegalArgumentException("COMPUTE task requires input parameters");
         }
 
-        // Extremely safe, bounded deterministic computation for Phase 7
-        // Example: computing the Nth fibonacci number, or simple mathematical operations
         String operation = (String) input.getOrDefault("operation", "add");
-
         Map<String, Object> result = new HashMap<>();
 
         if ("add".equalsIgnoreCase(operation)) {
@@ -40,9 +41,13 @@ public class ComputeTaskHandler implements TaskHandler {
             if (n < 0 || n > 1000) {
                 throw new IllegalArgumentException("Fibonacci n must be between 0 and 1000 for safety bounds");
             }
-            result.put("result", computeFibonacci(n));
+            result.put("result", computeFibonacci(n, task));
         } else {
             throw new IllegalArgumentException("Unsupported compute operation: " + operation);
+        }
+
+        if (Thread.currentThread().isInterrupted() || (task != null && task.isCancelled())) {
+            throw new InterruptedException("Task execution cancelled or interrupted before completing");
         }
 
         return result;
@@ -58,11 +63,14 @@ public class ComputeTaskHandler implements TaskHandler {
         return 0;
     }
 
-    private long computeFibonacci(int n) {
+    private long computeFibonacci(int n, WorkerTask task) throws InterruptedException {
         if (n <= 0) return 0;
         if (n == 1) return 1;
         long prev = 0, curr = 1;
         for (int i = 2; i <= n; i++) {
+            if (Thread.currentThread().isInterrupted() || (task != null && task.isCancelled())) {
+                throw new InterruptedException("Computation interrupted during fibonacci calculation");
+            }
             long next = prev + curr;
             prev = curr;
             curr = next;

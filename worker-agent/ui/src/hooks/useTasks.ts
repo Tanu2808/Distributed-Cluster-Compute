@@ -1,20 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { taskApi } from '../services/taskApi';
-import type { ActiveTasksResponse } from '../types';
+import type { WorkerTask } from '../types';
 
-export function useTasks(pollingIntervalMs = 5000) {
-  const [data, setData] = useState<ActiveTasksResponse | null>(null);
+export function useTasks(pollingIntervalMs = 4000) {
+  const [tasks, setTasks] = useState<WorkerTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
 
-    const fetchTasks = async () => {
+    const poll = async () => {
       try {
-        const res = await taskApi.getActive();
+        const res = await taskApi.getAll();
         if (mounted) {
-          setData(res);
+          setTasks(res);
           setError(null);
         }
       } catch (err) {
@@ -22,12 +23,14 @@ export function useTasks(pollingIntervalMs = 5000) {
           setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchTasks();
-    const intervalId = setInterval(fetchTasks, pollingIntervalMs);
+    poll();
+    const intervalId = setInterval(poll, pollingIntervalMs);
 
     return () => {
       mounted = false;
@@ -35,5 +38,26 @@ export function useTasks(pollingIntervalMs = 5000) {
     };
   }, [pollingIntervalMs]);
 
-  return { data, loading, error };
+  const refetch = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const res = await taskApi.getAll();
+      setTasks(res);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  }, []);
+
+  return {
+    tasks,
+    data: { tasks }, // For backward compatibility
+    loading,
+    refreshing,
+    error,
+    refetch,
+  };
 }

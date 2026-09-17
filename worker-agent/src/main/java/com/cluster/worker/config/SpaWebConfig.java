@@ -25,6 +25,10 @@ public class SpaWebConfig implements WebMvcConfigurer {
                         if (requestedResource.exists() && requestedResource.isReadable()) {
                             return requestedResource;
                         }
+                        if (resourcePath.startsWith("api/") || resourcePath.startsWith("ws/") || 
+                            "api".equals(resourcePath) || "ws".equals(resourcePath)) {
+                            return null;
+                        }
                         return new ClassPathResource("/static/index.html");
                     }
                 });
