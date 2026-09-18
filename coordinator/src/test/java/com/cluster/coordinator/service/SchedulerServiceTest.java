@@ -97,6 +97,7 @@ public class SchedulerServiceTest {
         TaskAssignment assignment = taskAssignmentRepository.findByTaskId("t1").orElseThrow();
         assertEquals("w1", assignment.getWorkerId());
         assertEquals(2, assignment.getAllocatedCpu());
+        verify(messagingTemplate).convertAndSend(eq("/topic/worker.w1.tasks"), any(MessageEnvelope.class));
     }
 
     @Test
