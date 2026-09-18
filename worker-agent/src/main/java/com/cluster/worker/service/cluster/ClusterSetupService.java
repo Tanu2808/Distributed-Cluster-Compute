@@ -21,15 +21,18 @@ public class ClusterSetupService {
     private final CoordinatorConnectionResolver connectionResolver;
     private final WorkerConfigurationStore configStore;
     private final WorkerStateManager stateManager;
+    private final com.cluster.worker.service.WorkerLifecycleService lifecycleService;
 
     public ClusterSetupService(CoordinatorProvisioningService provisioningService,
                                CoordinatorConnectionResolver connectionResolver,
                                WorkerConfigurationStore configStore,
-                               WorkerStateManager stateManager) {
+                               WorkerStateManager stateManager,
+                               @org.springframework.context.annotation.Lazy com.cluster.worker.service.WorkerLifecycleService lifecycleService) {
         this.provisioningService = provisioningService;
         this.connectionResolver = connectionResolver;
         this.configStore = configStore;
         this.stateManager = stateManager;
+        this.lifecycleService = lifecycleService;
     }
 
     @Value("${worker.coordinator.url:http://localhost:8080}")
@@ -61,6 +64,9 @@ public class ClusterSetupService {
                 // Transition state to kick off the connection flow
                 stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
                 stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+                
+                // Invoke existing connection startup mechanism
+                lifecycleService.initiateConnection();
                 
                 return new ClusterEnrollment(configStore.getWorkerId(), ClusterEnrollment.Status.SUCCESS, "Successfully joined cluster");
             } else {
@@ -105,6 +111,9 @@ public class ClusterSetupService {
         // Transition state to kick off the connection flow
         stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
         stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+        
+        // Invoke existing connection startup mechanism
+        lifecycleService.initiateConnection();
         
         return new ClusterConfiguration(clusterName, connectionInfo);
     }

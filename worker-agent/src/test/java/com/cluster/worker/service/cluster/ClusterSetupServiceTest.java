@@ -7,6 +7,7 @@ import com.cluster.worker.persistence.WorkerConfiguration;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.model.WorkerLifecycleState;
 import com.cluster.worker.service.WorkerStateManager;
+import com.cluster.worker.service.WorkerLifecycleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,11 +39,14 @@ class ClusterSetupServiceTest {
     @Mock
     private WorkerStateManager stateManager;
 
+    @Mock
+    private WorkerLifecycleService lifecycleService;
+
     private ClusterSetupService setupService;
 
     @BeforeEach
     void setUp() {
-        setupService = new ClusterSetupService(provisioningService, connectionResolver, configStore, stateManager);
+        setupService = new ClusterSetupService(provisioningService, connectionResolver, configStore, stateManager, lifecycleService);
         ReflectionTestUtils.setField(setupService, "defaultCoordinatorUrl", "http://localhost:8080");
         lenient().when(configStore.getWorkerId()).thenReturn("worker-1");
     }
@@ -58,6 +62,7 @@ class ClusterSetupServiceTest {
         // Ensure no state transitions or saves occurred on failure
         verify(configStore, never()).save();
         verify(stateManager, never()).transitionLifecycle(any());
+        verify(lifecycleService, never()).initiateConnection();
     }
 
     @Test
@@ -75,11 +80,12 @@ class ClusterSetupServiceTest {
 
             assertEquals(ClusterEnrollment.Status.SUCCESS, enrollment.getStatus());
 
-            // Order is critical: save config first, then state transitions
-            InOrder inOrder = inOrder(configStore, stateManager);
+            // Order is critical: save config first, then state transitions, then initiate connection
+            InOrder inOrder = inOrder(configStore, stateManager, lifecycleService);
             inOrder.verify(configStore).save();
             inOrder.verify(stateManager).transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
             inOrder.verify(stateManager).transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+            inOrder.verify(lifecycleService).initiateConnection();
         }
     }
 
@@ -95,10 +101,11 @@ class ClusterSetupServiceTest {
         
         verify(provisioningService, times(1)).provisionLocalCoordinator("test-cluster");
         
-        InOrder inOrder = inOrder(configStore, stateManager);
+        InOrder inOrder = inOrder(configStore, stateManager, lifecycleService);
         inOrder.verify(configStore).save();
         inOrder.verify(stateManager).transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
         inOrder.verify(stateManager).transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+        inOrder.verify(lifecycleService).initiateConnection();
     }
 
     @Test
@@ -112,6 +119,7 @@ class ClusterSetupServiceTest {
         // Ensure no state transitions or saves occurred on failure
         verify(configStore, never()).save();
         verify(stateManager, never()).transitionLifecycle(any());
+        verify(lifecycleService, never()).initiateConnection();
     }
 
     @Test
@@ -122,5 +130,6 @@ class ClusterSetupServiceTest {
 
         verify(configStore, never()).save();
         verify(stateManager, never()).transitionLifecycle(any());
+        verify(lifecycleService, never()).initiateConnection();
     }
 }
