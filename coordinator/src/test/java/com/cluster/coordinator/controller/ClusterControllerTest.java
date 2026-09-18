@@ -44,22 +44,23 @@ public class ClusterControllerTest {
 
     @Test
     public void testEnrollWorker_Success() {
-        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(true, "test-cluster", "http://localhost:8080");
-        when(enrollmentService.enrollWorker("VALID-CODE")).thenReturn(result);
+        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(true, "test-cluster", "http://localhost:8080", "mocked-runtime-credential");
+        when(enrollmentService.enrollWorker("VALID-CODE", "worker-123")).thenReturn(result);
 
-        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "VALID-CODE"));
+        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "VALID-CODE", "workerId", "worker-123"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("test-cluster", response.getBody().get("clusterId"));
         assertEquals("http://localhost:8080", response.getBody().get("coordinatorUrl"));
+        assertEquals("mocked-runtime-credential", response.getBody().get("runtimeCredential"));
     }
 
     @Test
     public void testEnrollWorker_Failure() {
-        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(false, null, null);
-        when(enrollmentService.enrollWorker("INVALID-CODE")).thenReturn(result);
+        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(false, null, null, null);
+        when(enrollmentService.enrollWorker("INVALID-CODE", "worker-123")).thenReturn(result);
 
-        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "INVALID-CODE"));
+        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "INVALID-CODE", "workerId", "worker-123"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals(null, response.getBody());

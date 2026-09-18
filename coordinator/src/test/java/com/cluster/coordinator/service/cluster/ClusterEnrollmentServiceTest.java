@@ -15,6 +15,7 @@ import static org.mockito.Mockito.*;
 public class ClusterEnrollmentServiceTest {
 
     private ClusterSettingsRepository settingsRepository;
+    private com.cluster.coordinator.repository.WorkerRepository workerRepository;
     private ClusterEnrollmentService enrollmentService;
 
     // Stored in DB in the formatted (hyphenated) form that generateNewCode() produces
@@ -23,7 +24,8 @@ public class ClusterEnrollmentServiceTest {
     @BeforeEach
     public void setup() {
         settingsRepository = mock(ClusterSettingsRepository.class);
-        enrollmentService = new ClusterEnrollmentService(settingsRepository);
+        workerRepository = mock(com.cluster.coordinator.repository.WorkerRepository.class);
+        enrollmentService = new ClusterEnrollmentService(settingsRepository, workerRepository);
         ReflectionTestUtils.setField(enrollmentService, "serverPort", "8080");
     }
 
@@ -79,53 +81,65 @@ public class ClusterEnrollmentServiceTest {
     @Test
     public void testEnrollWorker_FormattedCode_Succeeds() {
         stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Formatted code identical to stored value must succeed");
         assertEquals("test-cluster-id", result.getClusterId());
         assertEquals("http://localhost:8080", result.getCoordinatorUrl());
+        assertNotNull(result.getRuntimeCredential());
+        
+        verify(workerRepository).save(any());
     }
 
     /** (b) Correct unformatted code (hyphens stripped — what the Worker actually sends) must succeed. */
     @Test
     public void testEnrollWorker_UnformattedCode_Succeeds() {
         stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAABBBBCCCCDDDD");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAABBBBCCCCDDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Bare (no-hyphen) form of the correct code must succeed");
         assertEquals("test-cluster-id", result.getClusterId());
+        assertNotNull(result.getRuntimeCredential());
     }
 
     /** (c) Correct lowercase code must succeed (case-insensitive comparison). */
     @Test
     public void testEnrollWorker_LowercaseCode_Succeeds() {
         stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("aaaa-bbbb-cccc-dddd");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("aaaa-bbbb-cccc-dddd", "worker-123");
 
         assertTrue(result.isSuccess(), "Lowercase version of the correct code must succeed");
+        assertNotNull(result.getRuntimeCredential());
     }
 
     /** (d) Correct code with surrounding whitespace must succeed. */
     @Test
     public void testEnrollWorker_CodeWithSurroundingWhitespace_Succeeds() {
         stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("  AAAA-BBBB-CCCC-DDDD  ");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("  AAAA-BBBB-CCCC-DDDD  ", "worker-123");
 
         assertTrue(result.isSuccess(), "Code with surrounding whitespace must succeed");
+        assertNotNull(result.getRuntimeCredential());
     }
 
     /** (d-extra) Correct code with internal whitespace (spaces instead of hyphens) must succeed. */
     @Test
     public void testEnrollWorker_CodeWithInternalWhitespace_Succeeds() {
         stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA BBBB CCCC DDDD");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA BBBB CCCC DDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Code with internal spaces instead of hyphens must succeed");
+        assertNotNull(result.getRuntimeCredential());
     }
 
     /** (e) Incorrect code must fail (returns false, no cluster info). */
@@ -134,22 +148,28 @@ public class ClusterEnrollmentServiceTest {
         when(settingsRepository.findById("CLUSTER_JOIN_CODE"))
                 .thenReturn(Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", STORED_CODE)));
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("ZZZZ-YYYY-XXXX-WWWW");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("ZZZZ-YYYY-XXXX-WWWW", "worker-123");
 
         assertFalse(result.isSuccess(), "Wrong code must not succeed");
         assertNull(result.getClusterId());
         assertNull(result.getCoordinatorUrl());
+        assertNull(result.getRuntimeCredential());
+        verify(workerRepository, never()).save(any());
     }
 
     /** (f) Null and blank inputs must fail safely without throwing. */
     @Test
     public void testEnrollWorker_NullOrBlankCode_FailsSafely() {
-        assertFalse(enrollmentService.enrollWorker(null).isSuccess(), "null must return failure");
-        assertFalse(enrollmentService.enrollWorker("").isSuccess(), "empty string must return failure");
-        assertFalse(enrollmentService.enrollWorker("   ").isSuccess(), "blank string must return failure");
+        assertFalse(enrollmentService.enrollWorker(null, "worker-123").isSuccess(), "null must return failure");
+        assertFalse(enrollmentService.enrollWorker("", "worker-123").isSuccess(), "empty string must return failure");
+        assertFalse(enrollmentService.enrollWorker("   ", "worker-123").isSuccess(), "blank string must return failure");
+
+        assertFalse(enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", null).isSuccess(), "null workerId must fail");
+        assertFalse(enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "").isSuccess(), "empty workerId must fail");
 
         // No interaction with repository for null/blank inputs
         verify(settingsRepository, never()).findById(any());
+        verify(workerRepository, never()).save(any());
     }
 
     /** (g) Stored code in bare form must also be matched by formatted input (symmetric normalization). */
@@ -160,10 +180,12 @@ public class ClusterEnrollmentServiceTest {
                 .thenReturn(Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", "AAAABBBBCCCCDDDD")));
         when(settingsRepository.findById("CLUSTER_ID"))
                 .thenReturn(Optional.of(new ClusterSettings("CLUSTER_ID", "test-cluster-id")));
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD");
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Normalization must be symmetric — formatted input matches bare stored value");
+        assertNotNull(result.getRuntimeCredential());
     }
 }
 

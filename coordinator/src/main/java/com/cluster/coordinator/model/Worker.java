@@ -22,6 +22,8 @@ public class Worker {
 
     private String agentVersion;
 
+    private String runtimeCredentialHash;
+
     @Enumerated(EnumType.STRING)
     private WorkerState state;
 
@@ -64,6 +66,8 @@ public class Worker {
     public void setArchitecture(String architecture) { this.architecture = architecture; }
     public String getAgentVersion() { return agentVersion; }
     public void setAgentVersion(String agentVersion) { this.agentVersion = agentVersion; }
+    public String getRuntimeCredentialHash() { return runtimeCredentialHash; }
+    public void setRuntimeCredentialHash(String runtimeCredentialHash) { this.runtimeCredentialHash = runtimeCredentialHash; }
     public WorkerState getState() { return state; }
     public void setState(WorkerState state) { this.state = state; }
     public LocalDateTime getLastHeartbeat() { return lastHeartbeat; }

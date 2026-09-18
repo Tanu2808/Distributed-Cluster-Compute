@@ -30,12 +30,15 @@ public class ClusterController {
     @PostMapping("/enroll")
     public ResponseEntity<Map<String, String>> enrollWorker(@RequestBody Map<String, String> payload) {
         String joinCode = payload.get("joinCode");
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker(joinCode);
+        String workerId = payload.get("workerId");
+        
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker(joinCode, workerId);
         
         if (result.isSuccess()) {
             return ResponseEntity.ok(Map.of(
                     "clusterId", result.getClusterId(),
-                    "coordinatorUrl", result.getCoordinatorUrl()
+                    "coordinatorUrl", result.getCoordinatorUrl(),
+                    "runtimeCredential", result.getRuntimeCredential()
             ));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

@@ -46,19 +46,28 @@ public class ClusterSetupService {
         String enrollUrl = defaultCoordinatorUrl + "/api/cluster/enroll";
 
         try {
-            Map<String, String> requestBody = Map.of("joinCode", joinCode.getCode());
+            Map<String, String> requestBody = Map.of(
+                    "joinCode", joinCode.getCode(),
+                    "workerId", configStore.getWorkerId()
+            );
             ResponseEntity<Map> response = restTemplate.postForEntity(enrollUrl, requestBody, Map.class);
             
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 String clusterId = (String) response.getBody().get("clusterId");
                 String returnedCoordinatorUrl = (String) response.getBody().get("coordinatorUrl");
+                String runtimeCredential = (String) response.getBody().get("runtimeCredential");
 
                 // Persist Configuration
                 var storedConfig = configStore.getConfig();
                 storedConfig.setClusterName(clusterId);
                 storedConfig.setClusterId(clusterId);
                 storedConfig.setCoordinatorUrl(returnedCoordinatorUrl != null ? returnedCoordinatorUrl : defaultCoordinatorUrl);
-                storedConfig.setEnrollmentCredential(joinCode.getCode());
+                
+                if (runtimeCredential != null) {
+                    storedConfig.setEnrollmentCredential(runtimeCredential);
+                } else {
+                    storedConfig.setEnrollmentCredential(joinCode.getCode()); // Fallback
+                }
                 configStore.save();
                 
                 // Transition state to kick off the connection flow

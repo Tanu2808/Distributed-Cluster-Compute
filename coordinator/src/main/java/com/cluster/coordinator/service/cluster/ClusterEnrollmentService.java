@@ -19,12 +19,14 @@ public class ClusterEnrollmentService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     private final ClusterSettingsRepository settingsRepository;
+    private final com.cluster.coordinator.repository.WorkerRepository workerRepository;
 
     @Value("${server.port:8080}")
     private String serverPort;
 
-    public ClusterEnrollmentService(ClusterSettingsRepository settingsRepository) {
+    public ClusterEnrollmentService(ClusterSettingsRepository settingsRepository, com.cluster.coordinator.repository.WorkerRepository workerRepository) {
         this.settingsRepository = settingsRepository;
+        this.workerRepository = workerRepository;
     }
 
     /**
@@ -61,10 +63,10 @@ public class ClusterEnrollmentService {
      * This means BTMV-WU8W-Y0HW-ZEXU, BTMVWU8WY0HWZEXU, and btmv wu8w y0hw zexu
      * all represent the same logical join code.
      */
-    @Transactional(readOnly = true)
-    public EnrollmentResult enrollWorker(String providedCode) {
-        if (providedCode == null || providedCode.isBlank()) {
-            return new EnrollmentResult(false, null, null);
+    @Transactional
+    public EnrollmentResult enrollWorker(String providedCode, String workerId) {
+        if (providedCode == null || providedCode.isBlank() || workerId == null || workerId.isBlank()) {
+            return new EnrollmentResult(false, null, null, null);
         }
 
         // Must happen in a transaction for findById
@@ -85,10 +87,21 @@ public class ClusterEnrollmentService {
             // But we must return the connection info expected by ClusterSetupService.
             String coordinatorUrl = "http://localhost:" + serverPort;
 
-            return new EnrollmentResult(true, clusterId, coordinatorUrl);
+            // Generate runtime credential
+            String rawCredential = generateRandomCredential();
+            String hash = hashCredential(rawCredential);
+
+            // Fetch or create worker
+            com.cluster.coordinator.model.Worker worker = workerRepository.findById(workerId)
+                    .orElseGet(() -> new com.cluster.coordinator.model.Worker(workerId, "unknown", com.cluster.coordinator.model.WorkerState.REGISTERING));
+            
+            worker.setRuntimeCredentialHash(hash);
+            workerRepository.save(worker);
+
+            return new EnrollmentResult(true, clusterId, coordinatorUrl, rawCredential);
         }
 
-        return new EnrollmentResult(false, null, null);
+        return new EnrollmentResult(false, null, null, null);
     }
 
     /**
@@ -111,15 +124,33 @@ public class ClusterEnrollmentService {
         return raw.substring(0, 4) + "-" + raw.substring(4, 8) + "-" + raw.substring(8, 12) + "-" + raw.substring(12, 16);
     }
 
+    private String generateRandomCredential() {
+        byte[] bytes = new byte[32];
+        secureRandom.nextBytes(bytes);
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String hashCredential(String raw) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return java.util.Base64.getEncoder().encodeToString(encodedhash);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not found", e);
+        }
+    }
+
     public static class EnrollmentResult {
         private final boolean success;
         private final String clusterId;
         private final String coordinatorUrl;
+        private final String runtimeCredential;
 
-        public EnrollmentResult(boolean success, String clusterId, String coordinatorUrl) {
+        public EnrollmentResult(boolean success, String clusterId, String coordinatorUrl, String runtimeCredential) {
             this.success = success;
             this.clusterId = clusterId;
             this.coordinatorUrl = coordinatorUrl;
+            this.runtimeCredential = runtimeCredential;
         }
 
         public boolean isSuccess() {
@@ -132,6 +163,10 @@ public class ClusterEnrollmentService {
 
         public String getCoordinatorUrl() {
             return coordinatorUrl;
+        }
+        
+        public String getRuntimeCredential() {
+            return runtimeCredential;
         }
     }
 }
