@@ -11,6 +11,7 @@ public class JobResponse {
     private long requestedMemory;
     private int totalPartitions;
     private int completedPartitions;
+    private String finalResult;
 
     public String getJobId() {
         return jobId;
@@ -66,5 +67,13 @@ public class JobResponse {
 
     public void setCompletedPartitions(int completedPartitions) {
         this.completedPartitions = completedPartitions;
+    }
+
+    public String getFinalResult() {
+        return finalResult;
+    }
+
+    public void setFinalResult(String finalResult) {
+        this.finalResult = finalResult;
     }
 }

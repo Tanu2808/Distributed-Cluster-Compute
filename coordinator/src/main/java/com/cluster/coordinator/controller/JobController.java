@@ -78,6 +78,7 @@ public class JobController {
         response.setRequestedMemory(job.getRequestedMemory());
         response.setTotalPartitions(job.getTotalPartitions());
         response.setCompletedPartitions(job.getCompletedPartitions());
+        response.setFinalResult(job.getFinalResult());
         return response;
     }
 

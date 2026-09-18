@@ -67,6 +67,7 @@ public class TaskExecutionServiceTest {
     private Job createJob(String id, int partitions) {
         Job j = new Job();
         j.setId(id);
+        j.setTaskType("SUM_RANGE");
         j.setState(JobState.QUEUED);
         j.setTotalPartitions(partitions);
         j.setCompletedPartitions(0);
@@ -263,6 +264,58 @@ public class TaskExecutionServiceTest {
     }
 
     @Test
+    public void testP2_DuplicateTaskResult_DoesNotDoubleCountFinalResult() {
+        createWorker("w1", WorkerState.ONLINE, 4, 8000);
+        createJob("j1", 1);
+        createTask("t1", "j1", 1, 2, 2000, TaskState.UNASSIGNED);
+        schedulerService.scheduleTasks();
+        
+        TaskResultMessage resultMsg = TaskResultMessage.builder()
+                .taskId("t1")
+                .jobId("j1")
+                .partitionId(1)
+                .status("COMPLETED")
+                .result(10L)
+                .build();
+                
+        taskExecutionService.processTaskResult("w1", resultMsg);
+        
+        Job j = jobRepository.findById("j1").orElseThrow();
+        assertEquals("10", j.getFinalResult());
+        
+        // Simulate a duplicate message arriving after job is completed
+        taskExecutionService.processTaskResult("w1", resultMsg);
+        
+        Job jAfter = jobRepository.findById("j1").orElseThrow();
+        assertEquals("10", jAfter.getFinalResult()); // Should still be 10, not 20
+    }
+
+    @Test
+    public void testP3_ExistingFinalResult_NotOverwritten() {
+        createWorker("w1", WorkerState.ONLINE, 4, 8000);
+        Job j = createJob("j1", 1);
+        // Pre-set a final result to simulate existing completed job or concurrent update
+        j.setFinalResult("999");
+        jobRepository.save(j);
+        
+        createTask("t1", "j1", 1, 2, 2000, TaskState.UNASSIGNED);
+        schedulerService.scheduleTasks();
+        
+        TaskResultMessage resultMsg = TaskResultMessage.builder()
+                .taskId("t1")
+                .jobId("j1")
+                .partitionId(1)
+                .status("COMPLETED")
+                .result(10L)
+                .build();
+                
+        taskExecutionService.processTaskResult("w1", resultMsg);
+        
+        Job jAfter = jobRepository.findById("j1").orElseThrow();
+        assertEquals("999", jAfter.getFinalResult()); // Preserved
+    }
+
+    @Test
     public void testU_MultiPartitionJob_CompletesProperly() {
         createWorker("A", WorkerState.ONLINE, 4, 16000);
         createWorker("B", WorkerState.ONLINE, 4, 16000);
@@ -280,16 +333,16 @@ public class TaskExecutionServiceTest {
         String w2 = taskAssignmentRepository.findByTaskId("t2").orElseThrow().getWorkerId();
         String w3 = taskAssignmentRepository.findByTaskId("t3").orElseThrow().getWorkerId();
         
-        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("job1").partitionId(1).status("COMPLETED").build();
+        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("job1").partitionId(1).status("COMPLETED").result(100L).build();
         taskExecutionService.processTaskResult(w1, msg1);
         assertEquals(1, jobRepository.findById("job1").orElseThrow().getCompletedPartitions());
         assertEquals(JobState.RUNNING, jobRepository.findById("job1").orElseThrow().getState()); // Wait, it's RUNNING because dispatch transitioned it
         
-        TaskResultMessage msg2 = TaskResultMessage.builder().taskId("t2").jobId("job1").partitionId(2).status("COMPLETED").build();
+        TaskResultMessage msg2 = TaskResultMessage.builder().taskId("t2").jobId("job1").partitionId(2).status("COMPLETED").result(200L).build();
         taskExecutionService.processTaskResult(w2, msg2);
         assertEquals(2, jobRepository.findById("job1").orElseThrow().getCompletedPartitions());
         
-        TaskResultMessage msg3 = TaskResultMessage.builder().taskId("t3").jobId("job1").partitionId(3).status("COMPLETED").build();
+        TaskResultMessage msg3 = TaskResultMessage.builder().taskId("t3").jobId("job1").partitionId(3).status("COMPLETED").result(300L).build();
         taskExecutionService.processTaskResult(w3, msg3);
         assertEquals(3, jobRepository.findById("job1").orElseThrow().getCompletedPartitions());
         
@@ -297,5 +350,83 @@ public class TaskExecutionServiceTest {
         assertEquals(4, resourceReservationService.getAvailableCpu("A"));
         assertEquals(4, resourceReservationService.getAvailableCpu("B"));
         assertEquals(4, resourceReservationService.getAvailableCpu("C"));
+        
+        Job completedJob = jobRepository.findById("job1").orElseThrow();
+        assertEquals("600", completedJob.getFinalResult());
+    }
+
+    @Test
+    public void testV_SinglePartitionAggregation() {
+        createWorker("w1", WorkerState.ONLINE, 4, 16000);
+        createJob("j1", 1);
+        createTask("t1", "j1", 1, 1, 1000, TaskState.UNASSIGNED);
+        schedulerService.scheduleTasks();
+        
+        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("j1").partitionId(1).status("COMPLETED").result(55L).build();
+        taskExecutionService.processTaskResult("w1", msg1);
+        
+        Job completedJob = jobRepository.findById("j1").orElseThrow();
+        assertEquals("55", completedJob.getFinalResult());
+        assertEquals(JobState.COMPLETED, completedJob.getState());
+    }
+
+    @Test
+    public void testW_FailedPartitionPreventsAggregation() {
+        createWorker("w1", WorkerState.ONLINE, 4, 16000);
+        createJob("j1", 2);
+        createTask("t1", "j1", 1, 1, 1000, TaskState.UNASSIGNED);
+        createTask("t2", "j1", 2, 1, 1000, TaskState.UNASSIGNED);
+        schedulerService.scheduleTasks();
+        
+        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("j1").partitionId(1).status("COMPLETED").result(10L).build();
+        taskExecutionService.processTaskResult("w1", msg1);
+        
+        TaskResultMessage msg2 = TaskResultMessage.builder().taskId("t2").jobId("j1").partitionId(2).status("FAILED").error("Failed").build();
+        taskExecutionService.processTaskResult("w1", msg2);
+        
+        Job failedJob = jobRepository.findById("j1").orElseThrow();
+        assertEquals(JobState.FAILED, failedJob.getState());
+        assertNull(failedJob.getFinalResult());
+    }
+
+    @Test
+    public void testX_LargeDeterministicSumRange() {
+        createWorker("w1", WorkerState.ONLINE, 4, 16000);
+        createJob("j1", 1);
+        createTask("t1", "j1", 1, 1, 1000, TaskState.UNASSIGNED);
+        schedulerService.scheduleTasks();
+        
+        long largeValue = 500000000500000000L; // Example of a very large sum
+        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("j1").partitionId(1).status("COMPLETED").result(largeValue).build();
+        taskExecutionService.processTaskResult("w1", msg1);
+        
+        Job completedJob = jobRepository.findById("j1").orElseThrow();
+        assertEquals("500000000500000000", completedJob.getFinalResult());
+    }
+
+    @Test
+    public void testY_ResultsFromAnotherJobNotIncluded() {
+        createWorker("w1", WorkerState.ONLINE, 4, 16000);
+        createJob("j1", 1);
+        createJob("j2", 1); // Another job
+        
+        createTask("t1", "j1", 1, 1, 1000, TaskState.UNASSIGNED);
+        createTask("t2", "j2", 1, 1, 1000, TaskState.UNASSIGNED); // Task for another job
+        
+        schedulerService.scheduleTasks();
+        
+        // Complete task for j2 first
+        TaskResultMessage msg2 = TaskResultMessage.builder().taskId("t2").jobId("j2").partitionId(1).status("COMPLETED").result(100L).build();
+        taskExecutionService.processTaskResult("w1", msg2);
+        
+        // Complete task for j1
+        TaskResultMessage msg1 = TaskResultMessage.builder().taskId("t1").jobId("j1").partitionId(1).status("COMPLETED").result(50L).build();
+        taskExecutionService.processTaskResult("w1", msg1);
+        
+        Job completedJob1 = jobRepository.findById("j1").orElseThrow();
+        assertEquals("50", completedJob1.getFinalResult()); // Should only be 50, not 150
+        
+        Job completedJob2 = jobRepository.findById("j2").orElseThrow();
+        assertEquals("100", completedJob2.getFinalResult());
     }
 }

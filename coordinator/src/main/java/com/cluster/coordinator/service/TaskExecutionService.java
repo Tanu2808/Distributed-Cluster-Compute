@@ -200,8 +200,25 @@ public class TaskExecutionService {
             Job job = jobRepository.findById(task.getJobId()).orElse(null);
             if (job != null && job.getState() != JobState.COMPLETED && job.getState() != JobState.FAILED) {
                 job.setCompletedPartitions(job.getCompletedPartitions() + 1);
-                
                 if (job.getCompletedPartitions() == job.getTotalPartitions()) {
+                    if (job.getFinalResult() == null && "SUM_RANGE".equals(job.getTaskType())) {
+                        java.util.List<TaskResult> results = taskResultRepository.findByJobId(job.getId());
+                        long successfulResults = results.stream().filter(r -> "COMPLETED".equals(r.getStatus())).count();
+                        if (successfulResults == job.getTotalPartitions()) {
+                            long totalSum = 0;
+                            for (TaskResult r : results) {
+                                if ("COMPLETED".equals(r.getStatus()) && r.getOutput() != null && !r.getOutput().isEmpty()) {
+                                    try {
+                                        String outputStr = r.getOutput().replace("\"", "").trim();
+                                        totalSum += Long.parseLong(outputStr);
+                                    } catch (NumberFormatException e) {
+                                        log.error("Failed to parse partition result: {}", r.getOutput(), e);
+                                    }
+                                }
+                            }
+                            job.setFinalResult(String.valueOf(totalSum));
+                        }
+                    }
                     job.setState(JobState.COMPLETED);
                     log.info("Job {} fully completed", job.getId());
                 }

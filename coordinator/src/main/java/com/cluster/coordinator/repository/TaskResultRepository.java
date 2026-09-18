@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface TaskResultRepository extends JpaRepository<TaskResult, String> {
     Optional<TaskResult> findByTaskId(String taskId);
+    java.util.List<TaskResult> findByJobId(String jobId);
 }

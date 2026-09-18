@@ -29,6 +29,9 @@ public class Job {
     
     private int completedPartitions;
     
+    @Column(columnDefinition = "TEXT")
+    private String finalResult;
+    
     @Enumerated(EnumType.STRING)
     private JobState state;
 
@@ -49,6 +52,8 @@ public class Job {
     public void setTotalPartitions(int totalPartitions) { this.totalPartitions = totalPartitions; }
     public int getCompletedPartitions() { return completedPartitions; }
     public void setCompletedPartitions(int completedPartitions) { this.completedPartitions = completedPartitions; }
+    public String getFinalResult() { return finalResult; }
+    public void setFinalResult(String finalResult) { this.finalResult = finalResult; }
     public JobState getState() { return state; }
     public void setState(JobState state) { this.state = state; }
 }

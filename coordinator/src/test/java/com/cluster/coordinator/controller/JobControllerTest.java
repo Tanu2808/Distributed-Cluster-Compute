@@ -148,13 +148,15 @@ public class JobControllerTest {
         mockJob.setId("job-123");
         mockJob.setTaskType("SUM_RANGE");
         mockJob.setState(JobState.QUEUED);
+        mockJob.setFinalResult("55");
 
         when(jobService.getJob("job-123")).thenReturn(Optional.of(mockJob));
 
         mockMvc.perform(get("/api/jobs/job-123"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.jobId").value("job-123"))
-                .andExpect(jsonPath("$.state").value("QUEUED"));
+                .andExpect(jsonPath("$.state").value("QUEUED"))
+                .andExpect(jsonPath("$.finalResult").value("55"));
     }
 
     @Test
