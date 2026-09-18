@@ -164,7 +164,7 @@ class TaskServiceTest {
         WorkerTask rejected = taskService.getTask("task-unsupported").orElse(null);
         // Either not saved or saved as REJECTED
         if (rejected != null) {
-            assertEquals(TaskState.REJECTED, rejected.getState());
+            assertEquals(TaskState.FAILED, rejected.getState());
         }
 
         // Negative resources
@@ -215,7 +215,7 @@ class TaskServiceTest {
 
         WorkerTask overflowTask = taskService.getTask("task-overflow").orElse(null);
         assertNotNull(overflowTask);
-        assertEquals(TaskState.REJECTED, overflowTask.getState());
+        assertEquals(TaskState.FAILED, overflowTask.getState());
         assertTrue(overflowTask.getErrorMessage().contains("queue is full"));
 
         blockerLatch.countDown();
@@ -329,7 +329,7 @@ class TaskServiceTest {
         // Third task will be in queue
         taskService.submitTask(new TaskAssignmentMessage("t3-queued", "BLOCK", Map.of(), 0, 100, 10));
 
-        assertEquals(TaskState.QUEUED, taskService.getTask("t3-queued").orElseThrow().getState());
+        assertEquals(TaskState.ASSIGNED, taskService.getTask("t3-queued").orElseThrow().getState());
 
         // Cancel queued task
         boolean cancelled = taskService.cancelTask("t3-queued");

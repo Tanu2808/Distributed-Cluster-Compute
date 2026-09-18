@@ -29,7 +29,7 @@ public class WorkerTask {
     private Instant completedAt;
 
     public WorkerTask() {
-        this.state = TaskState.RECEIVED;
+        this.state = TaskState.UNASSIGNED;
         this.receivedAt = Instant.now();
     }
 

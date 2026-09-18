@@ -149,13 +149,18 @@ public class WebSocketConnectionManager {
     }
 
     public void sendMessage(@NonNull String destination, @NonNull MessageEnvelope<?> envelope) {
-        StompSession session = this.stompSession;
+        StompSession session;
+        synchronized (connectionLock) {
+            session = this.stompSession;
+        }
         if (session != null && session.isConnected()) {
             try {
-                session.send(destination, envelope);
+                synchronized (session) {
+                    session.send(destination, envelope);
+                }
                 this.lastMessageTimestamp = java.time.Instant.now();
             } catch (Exception e) {
-                log.error("Error sending message to {}: {}", destination, e.getMessage());
+                log.error("Error sending message to {}: ", destination, e);
                 this.lastConnectionError = "Send error: " + e.getMessage();
                 handleDisconnect();
             }

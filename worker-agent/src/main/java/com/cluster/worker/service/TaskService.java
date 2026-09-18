@@ -91,13 +91,13 @@ public class TaskService {
 
     public List<WorkerTask> getActiveTasks() {
         return allTasks.values().stream()
-                .filter(t -> t.getState() == TaskState.RUNNING || t.getState() == TaskState.VALIDATING)
+                .filter(t -> t.getState() == TaskState.RUNNING || t.getState() == TaskState.UNASSIGNED)
                 .toList();
     }
 
     public List<WorkerTask> getQueuedTasks() {
         return allTasks.values().stream()
-                .filter(t -> t.getState() == TaskState.QUEUED)
+                .filter(t -> t.getState() == TaskState.ASSIGNED)
                 .toList();
     }
     
@@ -122,20 +122,20 @@ public class TaskService {
         // Reject duplicate task IDs safely
         if (allTasks.containsKey(taskId)) {
             log.warn("Duplicate task ID rejected: {}", taskId);
-            sendStatus(taskId, TaskState.REJECTED, "Duplicate task ID: " + taskId);
+            sendStatus(taskId, TaskState.FAILED, "Duplicate task ID: " + taskId);
             return;
         }
 
         // Validate task assignment fields
         if (assignment.getTaskType() == null || assignment.getTaskType().trim().isEmpty()) {
             log.warn("Task {} rejected: missing task type", taskId);
-            sendStatus(taskId, TaskState.REJECTED, "Missing task type");
+            sendStatus(taskId, TaskState.FAILED, "Missing task type");
             return;
         }
 
         if (assignment.getRequiredCpuCores() < 0 || assignment.getRequiredMemoryMb() < 0) {
             log.warn("Task {} rejected: negative resource requirements", taskId);
-            sendStatus(taskId, TaskState.REJECTED, "Invalid negative resource requirements");
+            sendStatus(taskId, TaskState.FAILED, "Invalid negative resource requirements");
             return;
         }
 
@@ -143,7 +143,7 @@ public class TaskService {
         Optional<TaskHandler> handlerOpt = handlerRegistry.getHandler(assignment.getTaskType());
         if (handlerOpt.isEmpty()) {
             log.warn("Task {} rejected: unsupported task type {}", taskId, assignment.getTaskType());
-            sendStatus(taskId, TaskState.REJECTED, "Unsupported task type: " + assignment.getTaskType());
+            sendStatus(taskId, TaskState.FAILED, "Unsupported task type: " + assignment.getTaskType());
             return;
         }
 
@@ -159,12 +159,12 @@ public class TaskService {
         task.setJobId(assignment.getJobId());
         task.setPartitionId(assignment.getPartitionId());
         task.setTotalPartitions(assignment.getTotalPartitions());
-        task.setState(TaskState.VALIDATING);
+        task.setState(TaskState.UNASSIGNED);
 
         WorkerTask existing = allTasks.putIfAbsent(taskId, task);
         if (existing != null) {
             log.warn("Duplicate task ID rejected during concurrent insert: {}", taskId);
-            sendStatus(taskId, TaskState.REJECTED, "Duplicate task ID: " + taskId);
+            sendStatus(taskId, TaskState.FAILED, "Duplicate task ID: " + taskId);
             return;
         }
 
@@ -181,7 +181,7 @@ public class TaskService {
                 return;
             }
 
-            task.setState(TaskState.QUEUED);
+            task.setState(TaskState.ASSIGNED);
             boolean queued = taskQueue.offer(task);
             if (!queued) {
                 admissionService.release(task);
@@ -189,7 +189,7 @@ public class TaskService {
                 return;
             }
 
-            sendStatus(task, TaskState.QUEUED, "Task queued successfully");
+            sendStatus(task, TaskState.ASSIGNED, "Task queued successfully");
             log.info("Task {} queued successfully", taskId);
         }
     }
@@ -206,7 +206,7 @@ public class TaskService {
                 return false;
             }
 
-            if (current == TaskState.QUEUED || current == TaskState.VALIDATING || current == TaskState.RECEIVED) {
+            if (current == TaskState.ASSIGNED || current == TaskState.UNASSIGNED) {
                 taskQueue.remove(task);
                 task.setState(TaskState.CANCELLED);
                 task.setErrorMessage("Task cancelled while in queue");
@@ -239,13 +239,13 @@ public class TaskService {
 
     private void rejectTask(WorkerTask task, String reason) {
         synchronized (task) {
-            task.setState(TaskState.REJECTED);
+            task.setState(TaskState.FAILED);
             task.setErrorMessage(reason);
             task.setCompletedAt(Instant.now());
         }
         admissionService.release(task);
         log.warn("Task {} rejected: {}", task.getTaskId(), reason);
-        sendStatus(task, TaskState.REJECTED, reason);
+        sendStatus(task, TaskState.FAILED, reason);
         sendResult(task);
     }
 
