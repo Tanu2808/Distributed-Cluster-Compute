@@ -59,6 +59,7 @@ public class ClusterSetupService {
                 configStore.save();
                 
                 // Transition state to kick off the connection flow
+                stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
                 stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
                 
                 return new ClusterEnrollment(configStore.getWorkerId(), ClusterEnrollment.Status.SUCCESS, "Successfully joined cluster");
@@ -102,6 +103,7 @@ public class ClusterSetupService {
         configStore.save();
         
         // Transition state to kick off the connection flow
+        stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
         stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
         
         return new ClusterConfiguration(clusterName, connectionInfo);
