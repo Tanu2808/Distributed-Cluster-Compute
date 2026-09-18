@@ -55,6 +55,11 @@ public class ClusterEnrollmentService {
 
     /**
      * Validates a provided join code and returns the cluster connection information.
+     * <p>
+     * Comparison is case-insensitive and formatting-independent: hyphens and whitespace
+     * are stripped from both the stored value and the supplied value before comparing.
+     * This means BTMV-WU8W-Y0HW-ZEXU, BTMVWU8WY0HWZEXU, and btmv wu8w y0hw zexu
+     * all represent the same logical join code.
      */
     @Transactional(readOnly = true)
     public EnrollmentResult enrollWorker(String providedCode) {
@@ -66,13 +71,15 @@ public class ClusterEnrollmentService {
         String currentCode = settingsRepository.findById(JOIN_CODE_KEY)
                 .map(ClusterSettings::getValue)
                 .orElse(null);
-                
-        if (currentCode != null && currentCode.equals(providedCode.trim().toUpperCase())) {
+
+        // Normalize both sides so that XXXX-XXXX-XXXX-XXXX and XXXXXXXXXXXXXXXX
+        // are treated as identical logical values.
+        if (currentCode != null && normalizeCode(currentCode).equals(normalizeCode(providedCode))) {
             // Note: clusterId logic. If the coordinator has a cluster ID stored, use it, else default.
             String clusterId = settingsRepository.findById("CLUSTER_ID")
                     .map(ClusterSettings::getValue)
                     .orElse("local-cluster");
-            
+
             // Construct a relative or default URL. The worker might already be calling us on a specific URL.
             // For MVP, if they successfully connect, they'll just keep using whatever base URL they connected with.
             // But we must return the connection info expected by ClusterSetupService.
@@ -82,6 +89,14 @@ public class ClusterEnrollmentService {
         }
 
         return new EnrollmentResult(false, null, null);
+    }
+
+    /**
+     * Normalizes a join code for comparison purposes by removing hyphens and whitespace
+     * and converting to uppercase. Does not modify how codes are stored or displayed.
+     */
+    private String normalizeCode(String code) {
+        return code.replaceAll("[\\s\\-]", "").toUpperCase();
     }
 
     private String generateNewCode() {
