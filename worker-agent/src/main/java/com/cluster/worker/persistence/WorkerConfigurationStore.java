@@ -27,6 +27,8 @@ public class WorkerConfigurationStore {
     public WorkerConfigurationStore(LocalStateStore stateStore) {
         this.stateStore = stateStore;
         this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        this.objectMapper.disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 
     @PostConstruct
