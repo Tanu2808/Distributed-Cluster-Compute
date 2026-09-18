@@ -108,11 +108,25 @@ public class WorkerMessageController {
         try {
             com.cluster.shared.protocol.ResourceUpdateMessage resourceMessage = objectMapper.convertValue(envelope.getPayload(), com.cluster.shared.protocol.ResourceUpdateMessage.class);
             
+            // Update the resource capacity in WorkerResource
+            workerService.updateWorkerResources(envelope.getWorkerId(), resourceMessage);
+
             // In a full implementation, we'd have a WorkerService method to update these dynamic metrics.
             // For now, we update the heartbeat with cpu and memory.
             WorkerHeartbeatRequest request = new WorkerHeartbeatRequest();
-            request.setCpuUsagePercent(resourceMessage.getCpuUsagePercent());
-            request.setMemoryUsagePercent((double) resourceMessage.getMemoryUsedBytes() / resourceMessage.getMemoryTotalBytes() * 100);
+            
+            if (resourceMessage.getCpuUsagePercent() != null) {
+                request.setCpuUsagePercent(resourceMessage.getCpuUsagePercent());
+            } else {
+                request.setCpuUsagePercent(0.0);
+            }
+            
+            if (resourceMessage.getMemoryUsedBytes() != null && resourceMessage.getMemoryTotalBytes() != null && resourceMessage.getMemoryTotalBytes() > 0) {
+                request.setMemoryUsagePercent((double) resourceMessage.getMemoryUsedBytes() / resourceMessage.getMemoryTotalBytes() * 100.0);
+            } else {
+                request.setMemoryUsagePercent(0.0);
+            }
+            
             request.setActiveTasks(0); // This should be tracked elsewhere
             
             heartbeatService.processHeartbeat(envelope.getWorkerId(), request);

@@ -70,6 +70,19 @@ public class WorkerService {
         return worker;
     }
 
+    @Transactional
+    public void updateWorkerResources(String workerId, com.cluster.shared.protocol.ResourceUpdateMessage resourceMsg) {
+        workerResourceRepository.findByWorkerId(workerId).ifPresent(resource -> {
+            if (resourceMsg.getMemoryTotalBytes() != null) {
+                resource.setMemoryRamMb(resourceMsg.getMemoryTotalBytes() / (1024 * 1024));
+            }
+            if (resourceMsg.getDiskTotalBytes() != null) {
+                resource.setStorageMb(resourceMsg.getDiskTotalBytes() / (1024 * 1024));
+            }
+            workerResourceRepository.save(resource);
+        });
+    }
+
     public List<Worker> getAllWorkers() {
         return workerRepository.findAll();
     }

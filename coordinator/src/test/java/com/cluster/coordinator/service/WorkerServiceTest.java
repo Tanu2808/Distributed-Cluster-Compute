@@ -63,4 +63,24 @@ class WorkerServiceTest {
         verify(workerResourceRepository, times(1)).save(any());
         verify(eventService, times(1)).recordEvent(eq("WORKER_REGISTERED"), anyString(), eq("worker-1"));
     }
+
+    @Test
+    void updateWorkerResources_UpdatesMemoryAndDisk() {
+        com.cluster.coordinator.model.WorkerResource existingResource = new com.cluster.coordinator.model.WorkerResource();
+        existingResource.setWorkerId("worker-1");
+        existingResource.setMemoryRamMb(2048);
+        existingResource.setStorageMb(10240);
+
+        when(workerResourceRepository.findByWorkerId("worker-1")).thenReturn(Optional.of(existingResource));
+
+        com.cluster.shared.protocol.ResourceUpdateMessage msg = new com.cluster.shared.protocol.ResourceUpdateMessage();
+        msg.setMemoryTotalBytes(4096L * 1024 * 1024);
+        msg.setDiskTotalBytes(20480L * 1024 * 1024);
+
+        workerService.updateWorkerResources("worker-1", msg);
+
+        verify(workerResourceRepository, times(1)).save(existingResource);
+        assertEquals(4096, existingResource.getMemoryRamMb());
+        assertEquals(20480, existingResource.getStorageMb());
+    }
 }
