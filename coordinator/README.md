@@ -25,7 +25,12 @@ The Coordinator is the central **control plane** (Master) of the Distributed Com
 * Aggregates physical views (per-worker capabilities) into a logical cluster-wide resource pool view.
 * Tracks time-based heartbeats to determine if a worker goes offline.
 
-## To Be Implemented
+## Configuration
 
-* **Backend-to-Frontend Push Events**: The Coordinator requires a new STOMP/WebSocket endpoint (e.g., `/ws/cluster`) designed specifically for pushing live event feeds to the React frontend.
-* **Task Scheduling Engine**: Implementing Directed Acyclic Graph (DAG) task execution logic and dispatching tasks over the `TASK_ASSIGN` protocol.
+| Property | Environment Variable | Default | Description |
+|---|---|---|---|
+| `cluster.coordinator.advertised-url` | `COORDINATOR_ADVERTISED_URL` or `CLUSTER_COORDINATOR_ADVERTISED_URL` | `http://localhost:${server.port:8080}` | Reachable base URL of the Coordinator returned to Workers during enrollment. For LAN or remote deployments, set to the reachable IP or hostname (e.g. `http://192.168.137.165:8080`). |
+| `cluster.security.api-username` | `CLUSTER_SECURITY_API_USERNAME` | `admin` | Username for basic authentication |
+| `cluster.security.api-password` | `CLUSTER_SECURITY_API_PASSWORD` | `admin_secret` | Password for basic authentication |
+| `cluster.heartbeat.timeout-seconds` | `CLUSTER_HEARTBEAT_TIMEOUT_SECONDS` | `30` | Heartbeat timeout threshold in seconds |
+

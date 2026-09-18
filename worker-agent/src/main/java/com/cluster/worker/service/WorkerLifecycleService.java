@@ -92,7 +92,7 @@ public class WorkerLifecycleService {
         }
     }
 
-    private synchronized void initiateConnection() {
+    public synchronized void initiateConnection() {
         String workerId = identityGenerator.getOrCreateWorkerId();
         if (stateManager.getLifecycleState() == WorkerLifecycleState.STOPPING ||
             stateManager.getLifecycleState() == WorkerLifecycleState.SETUP_REQUIRED) {

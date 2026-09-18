@@ -112,7 +112,7 @@ public class SchedulerService {
                         .payload(msgPayload)
                         .build();
 
-                messagingTemplate.convertAndSend("/topic/worker." + selectedWorker.getId() + ".control", envelope);
+                messagingTemplate.convertAndSend("/topic/worker." + selectedWorker.getId() + ".tasks", envelope);
                 log.info("Successfully dispatched TASK_ASSIGN for task {} to worker {}", task.getId(), selectedWorker.getId());
 
                 if (job.getState() == JobState.QUEUED) {
