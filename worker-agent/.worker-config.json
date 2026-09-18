@@ -1,1 +1,1 @@
-{"version":1,"workerId":"640c3d9a-a425-48c1-8c52-9085a9b2ffb4","clusterId":null,"clusterName":null,"coordinatorUrl":null,"enrollmentCredential":null}
+{"version":1,"workerId":"640c3d9a-a425-48c1-8c52-9085a9b2ffb4","clusterId":"local-cluster","clusterName":"local-cluster","coordinatorUrl":"http://localhost:8080","enrollmentCredential":"JDh93Vgh1uQgsRHh4hWbEkhk2LI0iLmHMYtL6o3l6uk"}

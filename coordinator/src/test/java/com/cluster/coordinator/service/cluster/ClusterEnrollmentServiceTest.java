@@ -27,6 +27,7 @@ public class ClusterEnrollmentServiceTest {
         workerRepository = mock(com.cluster.coordinator.repository.WorkerRepository.class);
         enrollmentService = new ClusterEnrollmentService(settingsRepository, workerRepository);
         ReflectionTestUtils.setField(enrollmentService, "serverPort", "8080");
+        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", "http://localhost:8080");
     }
 
     // -------------------------------------------------------------------------
@@ -186,6 +187,50 @@ public class ClusterEnrollmentServiceTest {
 
         assertTrue(result.isSuccess(), "Normalization must be symmetric — formatted input matches bare stored value");
         assertNotNull(result.getRuntimeCredential());
+    }
+
+    // -------------------------------------------------------------------------
+    // Advertised Coordinator URL tests
+    // -------------------------------------------------------------------------
+
+    /** Configured advertised URL must be returned in EnrollmentResult. */
+    @Test
+    public void testEnrollWorker_ConfiguredAdvertisedUrl_ReturnsConfiguredUrl() {
+        stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", "http://192.168.1.100:8080");
+
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+
+        assertTrue(result.isSuccess());
+        assertEquals("http://192.168.1.100:8080", result.getCoordinatorUrl());
+    }
+
+    /** Trailing slash in advertised URL must be stripped so WebSocket URLs format cleanly. */
+    @Test
+    public void testEnrollWorker_ConfiguredAdvertisedUrl_StripsTrailingSlash() {
+        stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", "http://192.168.1.100:8080/");
+
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+
+        assertTrue(result.isSuccess());
+        assertEquals("http://192.168.1.100:8080", result.getCoordinatorUrl());
+    }
+
+    /** When advertisedUrl is null or blank, fallback to localhost with serverPort. */
+    @Test
+    public void testEnrollWorker_AdvertisedUrlNull_FallsBackToLocalhostWithServerPort() {
+        stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", null);
+        ReflectionTestUtils.setField(enrollmentService, "serverPort", "9090");
+
+        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+
+        assertTrue(result.isSuccess());
+        assertEquals("http://localhost:9090", result.getCoordinatorUrl());
     }
 }
 

@@ -24,6 +24,9 @@ public class ClusterEnrollmentService {
     @Value("${server.port:8080}")
     private String serverPort;
 
+    @Value("${cluster.coordinator.advertised-url:http://localhost:${server.port:8080}}")
+    private String advertisedUrl;
+
     public ClusterEnrollmentService(ClusterSettingsRepository settingsRepository, com.cluster.coordinator.repository.WorkerRepository workerRepository) {
         this.settingsRepository = settingsRepository;
         this.workerRepository = workerRepository;
@@ -82,10 +85,8 @@ public class ClusterEnrollmentService {
                     .map(ClusterSettings::getValue)
                     .orElse("local-cluster");
 
-            // Construct a relative or default URL. The worker might already be calling us on a specific URL.
-            // For MVP, if they successfully connect, they'll just keep using whatever base URL they connected with.
-            // But we must return the connection info expected by ClusterSetupService.
-            String coordinatorUrl = "http://localhost:" + serverPort;
+            // Return configured advertised coordinator URL so remote or local workers connect back properly
+            String coordinatorUrl = resolveCoordinatorUrl();
 
             // Generate runtime credential
             String rawCredential = generateRandomCredential();
@@ -102,6 +103,21 @@ public class ClusterEnrollmentService {
         }
 
         return new EnrollmentResult(false, null, null, null);
+    }
+
+    /**
+     * Resolves the Coordinator URL advertised to workers during enrollment.
+     * Uses configured advertised-url, falling back to http://localhost:{server.port},
+     * and strips any trailing slash to ensure clean URL concatenation.
+     */
+    private String resolveCoordinatorUrl() {
+        String url = (advertisedUrl != null && !advertisedUrl.isBlank())
+                ? advertisedUrl.trim()
+                : "http://localhost:" + (serverPort != null && !serverPort.isBlank() ? serverPort : "8080");
+        if (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        return url;
     }
 
     /**
