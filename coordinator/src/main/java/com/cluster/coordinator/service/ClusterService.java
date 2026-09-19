@@ -6,10 +6,9 @@ import com.cluster.coordinator.model.WorkerResource;
 import com.cluster.coordinator.model.WorkerState;
 import com.cluster.coordinator.repository.WorkerRepository;
 import com.cluster.coordinator.repository.WorkerResourceRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 public class ClusterService {
@@ -17,16 +16,21 @@ public class ClusterService {
     private final WorkerRepository workerRepository;
     private final WorkerResourceRepository workerResourceRepository;
 
-    public ClusterService(WorkerRepository workerRepository, WorkerResourceRepository workerResourceRepository) {
+    public ClusterService(
+            WorkerRepository workerRepository, WorkerResourceRepository workerResourceRepository) {
         this.workerRepository = workerRepository;
         this.workerResourceRepository = workerResourceRepository;
     }
 
     @Transactional(readOnly = true)
     public ClusterResourcesResponse getAggregateResources() {
-        List<Worker> activeWorkers = workerRepository.findAll().stream()
-                .filter(w -> w.getState() == WorkerState.ONLINE || w.getState() == WorkerState.BUSY)
-                .toList();
+        List<Worker> activeWorkers =
+                workerRepository.findAll().stream()
+                        .filter(
+                                w ->
+                                        w.getState() == WorkerState.ONLINE
+                                                || w.getState() == WorkerState.BUSY)
+                        .toList();
 
         long totalCpu = 0;
         long totalMemory = 0;
@@ -35,7 +39,8 @@ public class ClusterService {
         long totalNetwork = 0;
 
         for (Worker worker : activeWorkers) {
-            WorkerResource resource = workerResourceRepository.findByWorkerId(worker.getId()).orElse(null);
+            WorkerResource resource =
+                    workerResourceRepository.findByWorkerId(worker.getId()).orElse(null);
             if (resource != null) {
                 totalCpu += resource.getCpuCores();
                 totalMemory += resource.getMemoryRamMb();
@@ -45,6 +50,7 @@ public class ClusterService {
             }
         }
 
-        return new ClusterResourcesResponse(totalCpu, totalMemory, totalGpu, totalStorage, totalNetwork);
+        return new ClusterResourcesResponse(
+                totalCpu, totalMemory, totalGpu, totalStorage, totalNetwork);
     }
 }

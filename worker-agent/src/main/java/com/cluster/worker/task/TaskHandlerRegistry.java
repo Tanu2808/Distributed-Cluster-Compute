@@ -1,9 +1,8 @@
 package com.cluster.worker.task;
 
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.stereotype.Service;
 
 @Service
 public class TaskHandlerRegistry {
@@ -15,8 +14,6 @@ public class TaskHandlerRegistry {
     }
 
     public Optional<TaskHandler> getHandler(String taskType) {
-        return handlers.stream()
-                .filter(handler -> handler.supports(taskType))
-                .findFirst();
+        return handlers.stream().filter(handler -> handler.supports(taskType)).findFirst();
     }
 }

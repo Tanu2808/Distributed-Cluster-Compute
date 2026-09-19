@@ -1,10 +1,10 @@
 package com.cluster.shared.protocol;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.Map;
 
 @Data
 @Builder
@@ -23,11 +23,14 @@ public class TaskAssignmentMessage {
     private Integer partitionId;
     private Integer totalPartitions;
 
-    /**
-     * Backward-compatible constructor for non-partitioned task submissions.
-     */
-    public TaskAssignmentMessage(String taskId, String taskType, Map<String, Object> input,
-                                 int requiredCpuCores, long requiredMemoryMb, long timeoutSeconds) {
+    /** Backward-compatible constructor for non-partitioned task submissions. */
+    public TaskAssignmentMessage(
+            String taskId,
+            String taskType,
+            Map<String, Object> input,
+            int requiredCpuCores,
+            long requiredMemoryMb,
+            long timeoutSeconds) {
         this.taskId = taskId;
         this.taskType = taskType;
         this.input = input;

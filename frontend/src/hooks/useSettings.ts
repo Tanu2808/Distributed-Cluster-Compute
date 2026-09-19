@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { config } from '../utils/config';
-import { queryKeys } from '../types/api';
-import { fetchSettings, updateSettings } from '../api/settingsApi';
-import { mockSettings } from '../mock/settings';
-import type { ClusterSettings } from '../types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { config } from "../utils/config";
+import { queryKeys } from "../types/api";
+import { fetchSettings, updateSettings } from "../api/settingsApi";
+import { mockSettings } from "../mock/settings";
+import type { ClusterSettings } from "../types";
 
 /**
  * Returns the current cluster settings.
@@ -44,7 +44,10 @@ export function useUpdateSettings() {
 
     onSuccess: (savedSettings) => {
       // Update the settings cache with the confirmed data from the server
-      queryClient.setQueryData<ClusterSettings>(queryKeys.settings, savedSettings);
+      queryClient.setQueryData<ClusterSettings>(
+        queryKeys.settings,
+        savedSettings,
+      );
     },
   });
 }

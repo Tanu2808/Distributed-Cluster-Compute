@@ -4,7 +4,10 @@ interface LoadingSkeletonProps {
 }
 
 /** Animated pulse skeleton for card/table loading states */
-export function LoadingSkeleton({ rows = 4, className = '' }: LoadingSkeletonProps) {
+export function LoadingSkeleton({
+  rows = 4,
+  className = "",
+}: LoadingSkeletonProps) {
   return (
     <div className={`space-y-3 ${className}`}>
       {Array.from({ length: rows }).map((_, i) => (
@@ -22,7 +25,7 @@ export function LoadingSkeleton({ rows = 4, className = '' }: LoadingSkeletonPro
 }
 
 /** Full-card skeleton for chart/resource cards */
-export function CardSkeleton({ className = '' }: { className?: string }) {
+export function CardSkeleton({ className = "" }: { className?: string }) {
   return (
     <div className={`card p-5 animate-pulse ${className}`}>
       <div className="flex justify-between items-start mb-4">

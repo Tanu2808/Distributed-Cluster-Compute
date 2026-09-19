@@ -9,7 +9,9 @@
   }
 
   /* Compact form controls for technical consoles */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     @apply bg-white border border-console-border text-console-text text-sm rounded-sm focus:outline-none focus:border-console-accent focus:ring-1 focus:ring-console-accent;
   }
 }
@@ -29,4 +31,3 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #aab7b8;
 }
-

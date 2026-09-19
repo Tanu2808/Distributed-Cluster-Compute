@@ -1,15 +1,22 @@
 package com.cluster.worker.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.TaskAssignmentMessage;
 import com.cluster.shared.protocol.TaskResultMessage;
 import com.cluster.worker.communication.WebSocketConnectionManager;
 import com.cluster.worker.config.WorkerConfig;
-import com.cluster.worker.model.ExecutionState;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.task.*;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,16 +24,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -37,12 +34,9 @@ class TaskServiceTest {
     private TaskHandlerRegistry handlerRegistry;
     private TaskService taskService;
 
-    @Mock
-    private SystemMetricsProvider metricsProvider;
-    @Mock
-    private WebSocketConnectionManager connectionManager;
-    @Mock
-    private WorkerConfigurationStore configStore;
+    @Mock private SystemMetricsProvider metricsProvider;
+    @Mock private WebSocketConnectionManager connectionManager;
+    @Mock private WorkerConfigurationStore configStore;
 
     @BeforeEach
     void setUp() {
@@ -65,17 +59,19 @@ class TaskServiceTest {
         lenient().when(configStore.getWorkerId()).thenReturn("test-worker-1");
 
         // Register default COMPUTE and SUM_RANGE handlers
-        handlerRegistry = new TaskHandlerRegistry(List.of(new ComputeTaskHandler(), new SumRangeTaskHandler()));
+        handlerRegistry =
+                new TaskHandlerRegistry(
+                        List.of(new ComputeTaskHandler(), new SumRangeTaskHandler()));
 
-        taskService = new TaskService(
-                config,
-                stateManager,
-                admissionService,
-                metricsProvider,
-                handlerRegistry,
-                connectionManager,
-                configStore
-        );
+        taskService =
+                new TaskService(
+                        config,
+                        stateManager,
+                        admissionService,
+                        metricsProvider,
+                        handlerRegistry,
+                        connectionManager,
+                        configStore);
     }
 
     @AfterEach
@@ -92,14 +88,8 @@ class TaskServiceTest {
         input.put("a", 10.0);
         input.put("b", 25.0);
 
-        TaskAssignmentMessage assignment = new TaskAssignmentMessage(
-                "task-success-1",
-                "COMPUTE",
-                input,
-                1,
-                256,
-                5
-        );
+        TaskAssignmentMessage assignment =
+                new TaskAssignmentMessage("task-success-1", "COMPUTE", input, 1, 256, 5);
 
         taskService.submitTask(assignment);
 
@@ -132,12 +122,22 @@ class TaskServiceTest {
 
     @Test
     void testDuplicateTaskIdRejected() {
-        TaskAssignmentMessage first = new TaskAssignmentMessage(
-                "task-dup-1", "COMPUTE", Map.of("operation", "add", "a", 1, "b", 2), 1, 128, 5
-        );
-        TaskAssignmentMessage duplicate = new TaskAssignmentMessage(
-                "task-dup-1", "COMPUTE", Map.of("operation", "add", "a", 3, "b", 4), 1, 128, 5
-        );
+        TaskAssignmentMessage first =
+                new TaskAssignmentMessage(
+                        "task-dup-1",
+                        "COMPUTE",
+                        Map.of("operation", "add", "a", 1, "b", 2),
+                        1,
+                        128,
+                        5);
+        TaskAssignmentMessage duplicate =
+                new TaskAssignmentMessage(
+                        "task-dup-1",
+                        "COMPUTE",
+                        Map.of("operation", "add", "a", 3, "b", 4),
+                        1,
+                        128,
+                        5);
 
         taskService.submitTask(first);
         taskService.submitTask(duplicate);
@@ -150,16 +150,15 @@ class TaskServiceTest {
     @Test
     void testInvalidTaskAssignmentRejected() {
         // Missing taskId
-        TaskAssignmentMessage invalid1 = new TaskAssignmentMessage(
-                "", "COMPUTE", Map.of(), 1, 128, 5
-        );
+        TaskAssignmentMessage invalid1 =
+                new TaskAssignmentMessage("", "COMPUTE", Map.of(), 1, 128, 5);
         taskService.submitTask(invalid1);
         assertTrue(taskService.getAllTasks().isEmpty());
 
         // Unsupported task type
-        TaskAssignmentMessage invalid2 = new TaskAssignmentMessage(
-                "task-unsupported", "NON_EXISTENT_TYPE", Map.of(), 1, 128, 5
-        );
+        TaskAssignmentMessage invalid2 =
+                new TaskAssignmentMessage(
+                        "task-unsupported", "NON_EXISTENT_TYPE", Map.of(), 1, 128, 5);
         taskService.submitTask(invalid2);
         WorkerTask rejected = taskService.getTask("task-unsupported").orElse(null);
         // Either not saved or saved as REJECTED
@@ -168,9 +167,8 @@ class TaskServiceTest {
         }
 
         // Negative resources
-        TaskAssignmentMessage invalid3 = new TaskAssignmentMessage(
-                "task-neg", "COMPUTE", Map.of(), -1, -500, 5
-        );
+        TaskAssignmentMessage invalid3 =
+                new TaskAssignmentMessage("task-neg", "COMPUTE", Map.of(), -1, -500, 5);
         taskService.submitTask(invalid3);
         assertNull(taskService.getTask("task-neg").orElse(null));
     }
@@ -188,30 +186,46 @@ class TaskServiceTest {
 
         CountDownLatch taskStarted = new CountDownLatch(1);
         CountDownLatch blockerLatch = new CountDownLatch(1);
-        TaskHandler blockingHandler = new TaskHandler() {
-            @Override
-            public boolean supports(String taskType) { return "BLOCKING".equals(taskType); }
-            @Override
-            public Object execute(WorkerTask task) throws Exception {
-                taskStarted.countDown();
-                blockerLatch.await(5, TimeUnit.SECONDS);
-                return "done";
-            }
-        };
+        TaskHandler blockingHandler =
+                new TaskHandler() {
+                    @Override
+                    public boolean supports(String taskType) {
+                        return "BLOCKING".equals(taskType);
+                    }
+
+                    @Override
+                    public Object execute(WorkerTask task) throws Exception {
+                        taskStarted.countDown();
+                        blockerLatch.await(5, TimeUnit.SECONDS);
+                        return "done";
+                    }
+                };
 
         handlerRegistry = new TaskHandlerRegistry(List.of(blockingHandler));
-        taskService = new TaskService(customConfig, stateManager, admissionService, metricsProvider, handlerRegistry, connectionManager, configStore);
+        taskService =
+                new TaskService(
+                        customConfig,
+                        stateManager,
+                        admissionService,
+                        metricsProvider,
+                        handlerRegistry,
+                        connectionManager,
+                        configStore);
 
         // Task 0 starts running
-        taskService.submitTask(new TaskAssignmentMessage("task-fill-0", "BLOCKING", Map.of(), 0, 100, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-fill-0", "BLOCKING", Map.of(), 0, 100, 10));
         assertTrue(taskStarted.await(3, TimeUnit.SECONDS));
 
         // Tasks 1 and 2 fill queue capacity of 2
-        taskService.submitTask(new TaskAssignmentMessage("task-fill-1", "BLOCKING", Map.of(), 0, 100, 10));
-        taskService.submitTask(new TaskAssignmentMessage("task-fill-2", "BLOCKING", Map.of(), 0, 100, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-fill-1", "BLOCKING", Map.of(), 0, 100, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-fill-2", "BLOCKING", Map.of(), 0, 100, 10));
 
         // 4th task must be rejected due to full queue
-        taskService.submitTask(new TaskAssignmentMessage("task-overflow", "BLOCKING", Map.of(), 0, 100, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-overflow", "BLOCKING", Map.of(), 0, 100, 10));
 
         WorkerTask overflowTask = taskService.getTask("task-overflow").orElse(null);
         assertNotNull(overflowTask);
@@ -228,9 +242,8 @@ class TaskServiceTest {
         input.put("operation", "fibonacci");
         input.put("n", 2000);
 
-        TaskAssignmentMessage assignment = new TaskAssignmentMessage(
-                "task-fail-1", "COMPUTE", input, 1, 128, 5
-        );
+        TaskAssignmentMessage assignment =
+                new TaskAssignmentMessage("task-fail-1", "COMPUTE", input, 1, 128, 5);
 
         taskService.submitTask(assignment);
 
@@ -257,26 +270,39 @@ class TaskServiceTest {
         CountDownLatch taskStarted = new CountDownLatch(1);
         CountDownLatch taskInterrupted = new CountDownLatch(1);
 
-        TaskHandler slowHandler = new TaskHandler() {
-            @Override
-            public boolean supports(String taskType) { return "SLOW".equals(taskType); }
-            @Override
-            public Object execute(WorkerTask task) throws Exception {
-                taskStarted.countDown();
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    taskInterrupted.countDown();
-                    throw e;
-                }
-                return "completed-unexpectedly";
-            }
-        };
+        TaskHandler slowHandler =
+                new TaskHandler() {
+                    @Override
+                    public boolean supports(String taskType) {
+                        return "SLOW".equals(taskType);
+                    }
+
+                    @Override
+                    public Object execute(WorkerTask task) throws Exception {
+                        taskStarted.countDown();
+                        try {
+                            Thread.sleep(5000);
+                        } catch (InterruptedException e) {
+                            taskInterrupted.countDown();
+                            throw e;
+                        }
+                        return "completed-unexpectedly";
+                    }
+                };
 
         handlerRegistry = new TaskHandlerRegistry(List.of(slowHandler));
-        taskService = new TaskService(config, stateManager, admissionService, metricsProvider, handlerRegistry, connectionManager, configStore);
+        taskService =
+                new TaskService(
+                        config,
+                        stateManager,
+                        admissionService,
+                        metricsProvider,
+                        handlerRegistry,
+                        connectionManager,
+                        configStore);
 
-        taskService.submitTask(new TaskAssignmentMessage("task-cancel-run", "SLOW", Map.of(), 1, 200, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-cancel-run", "SLOW", Map.of(), 1, 200, 10));
 
         // Wait until task has actually started running
         assertTrue(taskStarted.await(3, TimeUnit.SECONDS));
@@ -305,19 +331,31 @@ class TaskServiceTest {
         CountDownLatch tasksRunning = new CountDownLatch(2);
         CountDownLatch blockWorker = new CountDownLatch(1);
 
-        TaskHandler blockingHandler = new TaskHandler() {
-            @Override
-            public boolean supports(String taskType) { return "BLOCK".equals(taskType); }
-            @Override
-            public Object execute(WorkerTask task) throws Exception {
-                tasksRunning.countDown();
-                blockWorker.await(5, TimeUnit.SECONDS);
-                return "ok";
-            }
-        };
+        TaskHandler blockingHandler =
+                new TaskHandler() {
+                    @Override
+                    public boolean supports(String taskType) {
+                        return "BLOCK".equals(taskType);
+                    }
+
+                    @Override
+                    public Object execute(WorkerTask task) throws Exception {
+                        tasksRunning.countDown();
+                        blockWorker.await(5, TimeUnit.SECONDS);
+                        return "ok";
+                    }
+                };
 
         handlerRegistry = new TaskHandlerRegistry(List.of(blockingHandler));
-        taskService = new TaskService(config, stateManager, admissionService, metricsProvider, handlerRegistry, connectionManager, configStore);
+        taskService =
+                new TaskService(
+                        config,
+                        stateManager,
+                        admissionService,
+                        metricsProvider,
+                        handlerRegistry,
+                        connectionManager,
+                        configStore);
 
         // Saturated execution pool (size 2)
         taskService.submitTask(new TaskAssignmentMessage("t1", "BLOCK", Map.of(), 0, 100, 10));
@@ -327,21 +365,30 @@ class TaskServiceTest {
         assertTrue(tasksRunning.await(3, TimeUnit.SECONDS));
 
         // Third task will be in queue
-        taskService.submitTask(new TaskAssignmentMessage("t3-queued", "BLOCK", Map.of(), 0, 100, 10));
+        taskService.submitTask(
+                new TaskAssignmentMessage("t3-queued", "BLOCK", Map.of(), 0, 100, 10));
 
         assertEquals(TaskState.ASSIGNED, taskService.getTask("t3-queued").orElseThrow().getState());
 
         // Cancel queued task
         boolean cancelled = taskService.cancelTask("t3-queued");
         assertTrue(cancelled);
-        assertEquals(TaskState.CANCELLED, taskService.getTask("t3-queued").orElseThrow().getState());
+        assertEquals(
+                TaskState.CANCELLED, taskService.getTask("t3-queued").orElseThrow().getState());
 
         blockWorker.countDown();
     }
 
     @Test
     void testTerminalStateCannotBeCancelledAgain() throws InterruptedException {
-        taskService.submitTask(new TaskAssignmentMessage("t-comp", "COMPUTE", Map.of("operation", "add", "a", 1, "b", 1), 1, 100, 5));
+        taskService.submitTask(
+                new TaskAssignmentMessage(
+                        "t-comp",
+                        "COMPUTE",
+                        Map.of("operation", "add", "a", 1, "b", 1),
+                        1,
+                        100,
+                        5));
 
         for (int i = 0; i < 30; i++) {
             WorkerTask t = taskService.getTask("t-comp").orElse(null);
@@ -360,21 +407,34 @@ class TaskServiceTest {
 
     @Test
     void testTaskTimeoutFailsAndReleasesResources() throws InterruptedException {
-        TaskHandler hangingHandler = new TaskHandler() {
-            @Override
-            public boolean supports(String taskType) { return "HANG".equals(taskType); }
-            @Override
-            public Object execute(WorkerTask task) throws Exception {
-                Thread.sleep(5000);
-                return "done";
-            }
-        };
+        TaskHandler hangingHandler =
+                new TaskHandler() {
+                    @Override
+                    public boolean supports(String taskType) {
+                        return "HANG".equals(taskType);
+                    }
+
+                    @Override
+                    public Object execute(WorkerTask task) throws Exception {
+                        Thread.sleep(5000);
+                        return "done";
+                    }
+                };
 
         handlerRegistry = new TaskHandlerRegistry(List.of(hangingHandler));
-        taskService = new TaskService(config, stateManager, admissionService, metricsProvider, handlerRegistry, connectionManager, configStore);
+        taskService =
+                new TaskService(
+                        config,
+                        stateManager,
+                        admissionService,
+                        metricsProvider,
+                        handlerRegistry,
+                        connectionManager,
+                        configStore);
 
         // Timeout set to 1 second
-        taskService.submitTask(new TaskAssignmentMessage("task-timeout", "HANG", Map.of(), 1, 300, 1));
+        taskService.submitTask(
+                new TaskAssignmentMessage("task-timeout", "HANG", Map.of(), 1, 300, 1));
 
         WorkerTask task = null;
         for (int i = 0; i < 40; i++) {
@@ -396,17 +456,18 @@ class TaskServiceTest {
 
     @Test
     void testSumRangeLifecycleAndResultMetadataPropagation() throws InterruptedException {
-        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
-                .taskId("sum-range-task-1")
-                .taskType("SUM_RANGE")
-                .input(Map.of("start", 1, "end", 100))
-                .requiredCpuCores(1)
-                .requiredMemoryMb(128)
-                .timeoutSeconds(5)
-                .jobId("job-distributed-99")
-                .partitionId(2)
-                .totalPartitions(5)
-                .build();
+        TaskAssignmentMessage assignment =
+                TaskAssignmentMessage.builder()
+                        .taskId("sum-range-task-1")
+                        .taskType("SUM_RANGE")
+                        .input(Map.of("start", 1, "end", 100))
+                        .requiredCpuCores(1)
+                        .requiredMemoryMb(128)
+                        .timeoutSeconds(5)
+                        .jobId("job-distributed-99")
+                        .partitionId(2)
+                        .totalPartitions(5)
+                        .build();
 
         taskService.submitTask(assignment);
 
@@ -429,7 +490,8 @@ class TaskServiceTest {
 
         // Verify result message sent over WebSocket with proper metadata
         ArgumentCaptor<MessageEnvelope> captor = ArgumentCaptor.forClass(MessageEnvelope.class);
-        verify(connectionManager, atLeastOnce()).sendMessage(eq("/app/worker.task.result"), captor.capture());
+        verify(connectionManager, atLeastOnce())
+                .sendMessage(eq("/app/worker.task.result"), captor.capture());
 
         TaskResultMessage resultMsg = (TaskResultMessage) captor.getValue().getPayload();
         assertEquals("sum-range-task-1", resultMsg.getTaskId());
@@ -442,14 +504,15 @@ class TaskServiceTest {
 
     @Test
     void testSumRange1ToMillionComputesCorrectly() throws InterruptedException {
-        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
-                .taskId("sum-range-million")
-                .taskType("SUM_RANGE")
-                .input(Map.of("start", 1, "end", 1_000_000))
-                .requiredCpuCores(1)
-                .requiredMemoryMb(128)
-                .timeoutSeconds(10)
-                .build();
+        TaskAssignmentMessage assignment =
+                TaskAssignmentMessage.builder()
+                        .taskId("sum-range-million")
+                        .taskType("SUM_RANGE")
+                        .input(Map.of("start", 1, "end", 1_000_000))
+                        .requiredCpuCores(1)
+                        .requiredMemoryMb(128)
+                        .timeoutSeconds(10)
+                        .build();
 
         taskService.submitTask(assignment);
 
@@ -471,16 +534,17 @@ class TaskServiceTest {
     @Test
     void testSumRangeInvalidInputFailsAndReleasesResources() throws InterruptedException {
         // start > end (invalid input)
-        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
-                .taskId("sum-invalid-range")
-                .taskType("SUM_RANGE")
-                .input(Map.of("start", 100, "end", 10))
-                .requiredCpuCores(1)
-                .requiredMemoryMb(128)
-                .timeoutSeconds(5)
-                .jobId("job-err-1")
-                .partitionId(0)
-                .build();
+        TaskAssignmentMessage assignment =
+                TaskAssignmentMessage.builder()
+                        .taskId("sum-invalid-range")
+                        .taskType("SUM_RANGE")
+                        .input(Map.of("start", 100, "end", 10))
+                        .requiredCpuCores(1)
+                        .requiredMemoryMb(128)
+                        .timeoutSeconds(5)
+                        .jobId("job-err-1")
+                        .partitionId(0)
+                        .build();
 
         taskService.submitTask(assignment);
 
@@ -501,7 +565,8 @@ class TaskServiceTest {
 
         // Verify result message sent with FAILED status and error
         ArgumentCaptor<MessageEnvelope> captor = ArgumentCaptor.forClass(MessageEnvelope.class);
-        verify(connectionManager, atLeastOnce()).sendMessage(eq("/app/worker.task.result"), captor.capture());
+        verify(connectionManager, atLeastOnce())
+                .sendMessage(eq("/app/worker.task.result"), captor.capture());
 
         TaskResultMessage resultMsg = (TaskResultMessage) captor.getValue().getPayload();
         assertEquals("sum-invalid-range", resultMsg.getTaskId());
@@ -515,14 +580,15 @@ class TaskServiceTest {
     @Test
     void testSumRangeMissingFieldFailsWithoutDefaulting() throws InterruptedException {
         // Missing start field completely
-        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
-                .taskId("sum-missing-field")
-                .taskType("SUM_RANGE")
-                .input(Map.of("end", 100))
-                .requiredCpuCores(1)
-                .requiredMemoryMb(128)
-                .timeoutSeconds(5)
-                .build();
+        TaskAssignmentMessage assignment =
+                TaskAssignmentMessage.builder()
+                        .taskId("sum-missing-field")
+                        .taskType("SUM_RANGE")
+                        .input(Map.of("end", 100))
+                        .requiredCpuCores(1)
+                        .requiredMemoryMb(128)
+                        .timeoutSeconds(5)
+                        .build();
 
         taskService.submitTask(assignment);
 
@@ -544,14 +610,15 @@ class TaskServiceTest {
     @Test
     void testSumRangeCancellationWhileRunning() throws InterruptedException {
         // Large range so it has work to do while we trigger cancel
-        TaskAssignmentMessage assignment = TaskAssignmentMessage.builder()
-                .taskId("sum-cancel-task")
-                .taskType("SUM_RANGE")
-                .input(Map.of("start", 1, "end", 50_000_000))
-                .requiredCpuCores(1)
-                .requiredMemoryMb(128)
-                .timeoutSeconds(10)
-                .build();
+        TaskAssignmentMessage assignment =
+                TaskAssignmentMessage.builder()
+                        .taskId("sum-cancel-task")
+                        .taskType("SUM_RANGE")
+                        .input(Map.of("start", 1, "end", 50_000_000))
+                        .requiredCpuCores(1)
+                        .requiredMemoryMb(128)
+                        .timeoutSeconds(10)
+                        .build();
 
         taskService.submitTask(assignment);
 

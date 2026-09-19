@@ -1,28 +1,33 @@
-import { useLocation } from 'react-router-dom';
-import { Clock } from 'lucide-react';
-import { useClusterSummary } from '../../hooks/useCluster';
-import { ClusterStatusBadge } from '../status/ClusterStatusBadge';
-import { WsStatusIndicator } from '../status/WsStatusIndicator';
+import { useLocation } from "react-router-dom";
+import { Clock } from "lucide-react";
+import { useClusterSummary } from "../../hooks/useCluster";
+import { ClusterStatusBadge } from "../status/ClusterStatusBadge";
+import { WsStatusIndicator } from "../status/WsStatusIndicator";
 
 const pageTitles: Record<string, string> = {
-  '/':              'Dashboard',
-  '/nodes':         'Nodes',
-  '/observability': 'Cluster Observability',
-  '/settings':      'Cluster Settings',
+  "/": "Dashboard",
+  "/nodes": "Nodes",
+  "/observability": "Cluster Observability",
+  "/settings": "Cluster Settings",
 };
 
 function LiveClock() {
   const now = new Date();
   return (
     <span className="font-mono text-xs text-slate-500">
-      {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+      {now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      })}
     </span>
   );
 }
 
 export function TopBar() {
   const { pathname } = useLocation();
-  const title = pageTitles[pathname] ?? 'Cluster';
+  const title = pageTitles[pathname] ?? "Cluster";
   const { data: cluster } = useClusterSummary();
 
   return (

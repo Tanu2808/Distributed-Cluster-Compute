@@ -4,11 +4,10 @@ import com.cluster.worker.model.cluster.ClusterConfiguration;
 import com.cluster.worker.model.cluster.ClusterEnrollment;
 import com.cluster.worker.model.cluster.JoinCode;
 import com.cluster.worker.service.cluster.ClusterSetupService;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/cluster")
@@ -31,14 +30,17 @@ public class ClusterController {
         try {
             JoinCode joinCode = new JoinCode(codeStr);
             ClusterEnrollment result = setupService.joinCluster(joinCode);
-            
+
             if (result.getStatus() == ClusterEnrollment.Status.FAILED) {
                 return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(result);
             }
-            
+
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(new ClusterEnrollment(null, ClusterEnrollment.Status.FAILED, e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(
+                            new ClusterEnrollment(
+                                    null, ClusterEnrollment.Status.FAILED, e.getMessage()));
         }
     }
 
@@ -46,7 +48,7 @@ public class ClusterController {
     public ResponseEntity<?> createCluster(@RequestBody Map<String, Object> payload) {
         String clusterName = (String) payload.get("clusterName");
         Boolean isLocal = (Boolean) payload.get("isLocal");
-        
+
         if (isLocal == null) {
             isLocal = true; // default
         }
@@ -55,7 +57,8 @@ public class ClusterController {
             ClusterConfiguration config = setupService.createCluster(clusterName, isLocal);
             return ResponseEntity.ok(config);
         } catch (UnsupportedOperationException e) {
-            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

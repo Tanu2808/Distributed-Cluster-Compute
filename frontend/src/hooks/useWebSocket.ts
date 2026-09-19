@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { wsService } from '../services/websocketService';
-import { useClusterStore } from '../state/clusterStore';
-import { queryKeys } from '../types/api';
-import { config } from '../utils/config';
-import type { ConnectionStatus, WsMessage } from '../types/api';
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { wsService } from "../services/websocketService";
+import { useClusterStore } from "../state/clusterStore";
+import { queryKeys } from "../types/api";
+import { config } from "../utils/config";
+import type { ConnectionStatus, WsMessage } from "../types/api";
 
 /**
  * Initializes the WebSocket connection at the app root level.
@@ -19,8 +19,8 @@ import type { ConnectionStatus, WsMessage } from '../types/api';
  */
 export function useWebSocket(): void {
   const queryClient = useQueryClient();
-  const setConnectionStatus = useClusterStore(s => s.setConnectionStatus);
-  const setLastWsEvent = useClusterStore(s => s.setLastWsEvent);
+  const setConnectionStatus = useClusterStore((s) => s.setConnectionStatus);
+  const setLastWsEvent = useClusterStore((s) => s.setLastWsEvent);
 
   useEffect(() => {
     if (config.USE_MOCK_API) return;
@@ -38,27 +38,27 @@ export function useWebSocket(): void {
       setLastWsEvent(message);
 
       switch (message.type) {
-        case 'CLUSTER_UPDATE':
+        case "CLUSTER_UPDATE":
           queryClient.invalidateQueries({ queryKey: queryKeys.cluster });
           break;
 
-        case 'RESOURCE_UPDATE':
+        case "RESOURCE_UPDATE":
           queryClient.invalidateQueries({ queryKey: queryKeys.cluster });
           queryClient.invalidateQueries({ queryKey: queryKeys.workers });
           break;
 
-        case 'HEARTBEAT_UPDATE':
+        case "HEARTBEAT_UPDATE":
           queryClient.invalidateQueries({ queryKey: queryKeys.workers });
           break;
 
-        case 'WORKER_CONNECTED':
-        case 'WORKER_DISCONNECTED':
+        case "WORKER_CONNECTED":
+        case "WORKER_DISCONNECTED":
           queryClient.invalidateQueries({ queryKey: queryKeys.workers });
           queryClient.invalidateQueries({ queryKey: queryKeys.cluster });
           queryClient.invalidateQueries({ queryKey: queryKeys.events });
           break;
 
-        case 'CONFIGURATION_CHANGED':
+        case "CONFIGURATION_CHANGED":
           queryClient.invalidateQueries({ queryKey: queryKeys.settings });
           queryClient.invalidateQueries({ queryKey: queryKeys.events });
           break;
@@ -81,5 +81,5 @@ export function useWebSocket(): void {
  * Components use this to render the connection indicator in the TopBar.
  */
 export function useConnectionStatus(): ConnectionStatus {
-  return useClusterStore(s => s.connectionStatus);
+  return useClusterStore((s) => s.connectionStatus);
 }

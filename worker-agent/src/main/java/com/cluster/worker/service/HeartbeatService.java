@@ -10,10 +10,9 @@ import com.cluster.worker.model.ExecutionState;
 import com.cluster.worker.model.SystemMetrics;
 import com.cluster.worker.monitoring.SystemMetricsProvider;
 import com.cluster.worker.registration.WorkerIdentityGenerator;
+import java.time.Instant;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.time.Instant;
 
 @Service
 public class HeartbeatService {
@@ -25,11 +24,12 @@ public class HeartbeatService {
     private final TaskService taskService;
     private Instant lastSuccessfulHeartbeat;
 
-    public HeartbeatService(WebSocketConnectionManager connectionManager,
-                            WorkerIdentityGenerator identityGenerator,
-                            SystemMetricsProvider metricsProvider,
-                            WorkerLifecycleService lifecycleService,
-                            TaskService taskService) {
+    public HeartbeatService(
+            WebSocketConnectionManager connectionManager,
+            WorkerIdentityGenerator identityGenerator,
+            SystemMetricsProvider metricsProvider,
+            WorkerLifecycleService lifecycleService,
+            TaskService taskService) {
         this.connectionManager = connectionManager;
         this.identityGenerator = identityGenerator;
         this.metricsProvider = metricsProvider;
@@ -41,11 +41,13 @@ public class HeartbeatService {
         return lastSuccessfulHeartbeat;
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(HeartbeatService.class);
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(HeartbeatService.class);
 
     @Scheduled(fixedDelayString = "${worker.heartbeat.interval-ms:5000}")
     public void sendHeartbeat() {
-        if (lifecycleService.getStateManager().getLifecycleState() == com.cluster.worker.model.WorkerLifecycleState.STOPPING) {
+        if (lifecycleService.getStateManager().getLifecycleState()
+                == com.cluster.worker.model.WorkerLifecycleState.STOPPING) {
             return;
         }
 
@@ -56,21 +58,25 @@ public class HeartbeatService {
 
         try {
             String workerId = identityGenerator.getOrCreateWorkerId();
-            
+
             HeartbeatMessage heartbeatMsg = new HeartbeatMessage();
-            String status = lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY ? "BUSY" : "ONLINE";
+            String status =
+                    lifecycleService.getStateManager().getExecutionState() == ExecutionState.BUSY
+                            ? "BUSY"
+                            : "ONLINE";
             heartbeatMsg.setStatus(status);
             heartbeatMsg.setRunningTasks(taskService.getActiveTasks().size());
 
-            MessageEnvelope<HeartbeatMessage> hbEnvelope = MessageEnvelope.<HeartbeatMessage>builder()
-                    .type(MessageType.HEARTBEAT)
-                    .workerId(workerId)
-                    .timestamp(Instant.now())
-                    .payload(heartbeatMsg)
-                    .build();
+            MessageEnvelope<HeartbeatMessage> hbEnvelope =
+                    MessageEnvelope.<HeartbeatMessage>builder()
+                            .type(MessageType.HEARTBEAT)
+                            .workerId(workerId)
+                            .timestamp(Instant.now())
+                            .payload(heartbeatMsg)
+                            .build();
 
             connectionManager.sendMessage("/app/worker.heartbeat", hbEnvelope);
-            
+
             // Send resource update safely
             try {
                 SystemMetrics metrics = metricsProvider.collectMetrics();
@@ -84,23 +90,25 @@ public class HeartbeatService {
                 if (metrics.getTotalMemoryMb() > 0) {
                     resourceMsg.setMemoryTotalBytes(metrics.getTotalMemoryMb() * 1024L * 1024L);
                 }
-                
+
                 long usedStorage = metrics.getUsedStorageMb();
                 long totalStorage = metrics.getTotalStorageMb();
-                
+
                 if (totalStorage > 0) {
                     resourceMsg.setDiskTotalBytes(totalStorage * 1024L * 1024L);
                     if (usedStorage > 0) {
-                        resourceMsg.setDiskFreeBytes(Math.max(0, totalStorage - usedStorage) * 1024L * 1024L);
+                        resourceMsg.setDiskFreeBytes(
+                                Math.max(0, totalStorage - usedStorage) * 1024L * 1024L);
                     }
                 }
-                
-                MessageEnvelope<ResourceUpdateMessage> resEnvelope = MessageEnvelope.<ResourceUpdateMessage>builder()
-                        .type(MessageType.RESOURCE_UPDATE)
-                        .workerId(workerId)
-                        .timestamp(Instant.now())
-                        .payload(resourceMsg)
-                        .build();
+
+                MessageEnvelope<ResourceUpdateMessage> resEnvelope =
+                        MessageEnvelope.<ResourceUpdateMessage>builder()
+                                .type(MessageType.RESOURCE_UPDATE)
+                                .workerId(workerId)
+                                .timestamp(Instant.now())
+                                .payload(resourceMsg)
+                                .build();
 
                 connectionManager.sendMessage("/app/worker.resource", resEnvelope);
             } catch (Exception e) {

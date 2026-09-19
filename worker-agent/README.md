@@ -2,6 +2,19 @@
 
 The Worker Agent is a lightweight daemon that runs on participating compute nodes (Slaves) within the Distributed Compute Cluster. It supplies computational resources to the cluster and awaits execution instructions from the Coordinator.
 
+```bash
+# Run multiple agents on the same machine by changing ports and IDs
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --cluster.worker.id=worker-node-1"
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8082 --cluster.worker.id=worker-node-2"
+```
+
+## Key Architectural Files
+- `WorkerStateManager.java`: Validates and coordinates transitions in the worker's lifecycle, connection, and execution states.
+- `WorkerLifecycleService.java`: Drives the initialization phases (registration, configuration, connecting).
+- `SystemMetricsProvider.java`: Abstraction for hardware monitoring (CPU, RAM, Disk) backed by OSHI.
+- `WebSocketConnectionManager.java`: Maintains the STOMP connection to the Coordinator and publishes liveness events.
+- `TaskExecutor.java`: Interface defining how distributed compute tasks are actually executed on the node.
+
 ## Responsibilities
 
 * Connecting to the Coordinator.

@@ -1,22 +1,5 @@
 package com.cluster.coordinator.controller;
 
-import com.cluster.coordinator.model.Job;
-import com.cluster.coordinator.model.JobState;
-import com.cluster.coordinator.model.Task;
-import com.cluster.coordinator.model.TaskState;
-import com.cluster.coordinator.service.JobService;
-import com.cluster.coordinator.exception.GlobalExceptionHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.util.List;
-import java.util.Optional;
-
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,6 +8,22 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.cluster.coordinator.exception.GlobalExceptionHandler;
+import com.cluster.coordinator.model.Job;
+import com.cluster.coordinator.model.JobState;
+import com.cluster.coordinator.model.Task;
+import com.cluster.coordinator.model.TaskState;
+import com.cluster.coordinator.service.JobService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 public class JobControllerTest {
 
@@ -37,9 +36,10 @@ public class JobControllerTest {
         jobService = Mockito.mock(JobService.class);
         objectMapper = new ObjectMapper();
         JobController jobController = new JobController(jobService, objectMapper);
-        mockMvc = MockMvcBuilders.standaloneSetup(jobController)
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
+        mockMvc =
+                MockMvcBuilders.standaloneSetup(jobController)
+                        .setControllerAdvice(new GlobalExceptionHandler())
+                        .build();
     }
 
     @Test
@@ -53,9 +53,11 @@ public class JobControllerTest {
         mockJob.setTotalPartitions(4);
         mockJob.setCompletedPartitions(0);
 
-        when(jobService.createJob(anyString(), anyString(), anyString(), anyInt(), anyLong())).thenReturn(mockJob);
+        when(jobService.createJob(anyString(), anyString(), anyString(), anyInt(), anyLong()))
+                .thenReturn(mockJob);
 
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "taskType": "SUM_RANGE",
                     "input": {
@@ -67,9 +69,10 @@ public class JobControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/jobs")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/jobs")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.jobId").value("job-123"))
                 .andExpect(jsonPath("$.taskType").value("SUM_RANGE"))
@@ -79,7 +82,8 @@ public class JobControllerTest {
 
     @Test
     public void testCreateJobMissingTaskType() throws Exception {
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "input": {
                         "start": 1,
@@ -90,16 +94,18 @@ public class JobControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/jobs")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/jobs")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.taskType").value("taskType is required"));
     }
 
     @Test
     public void testCreateJobInvalidCpu() throws Exception {
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "taskType": "SUM_RANGE",
                     "input": {
@@ -111,9 +117,10 @@ public class JobControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/jobs")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/jobs")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.requestedCpu").value("requestedCpu must be greater than 0"));
     }
@@ -123,7 +130,8 @@ public class JobControllerTest {
         when(jobService.createJob(anyString(), anyString(), anyString(), anyInt(), anyLong()))
                 .thenThrow(new IllegalArgumentException("Unsupported taskType: UNKNOWN"));
 
-        String requestBody = """
+        String requestBody =
+                """
                 {
                     "taskType": "UNKNOWN",
                     "input": {
@@ -135,9 +143,10 @@ public class JobControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/jobs")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestBody))
+        mockMvc.perform(
+                        post("/api/jobs")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Unsupported taskType: UNKNOWN"));
     }
@@ -163,8 +172,7 @@ public class JobControllerTest {
     public void testGetJobMissing() throws Exception {
         when(jobService.getJob("job-999")).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/jobs/job-999"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/jobs/job-999")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -194,7 +202,6 @@ public class JobControllerTest {
     public void testGetTasksMissingJob() throws Exception {
         when(jobService.getJob("job-999")).thenReturn(Optional.empty());
 
-        mockMvc.perform(get("/api/jobs/job-999/tasks"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/jobs/job-999/tasks")).andExpect(status().isNotFound());
     }
 }

@@ -13,7 +13,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class ClusterWebSocketConfig implements WebSocketConfigurer {
 
     private final ClusterWebSocketHandler clusterWebSocketHandler;
-    
+
     @Value("${cluster.security.api-username:admin}")
     private String username;
 

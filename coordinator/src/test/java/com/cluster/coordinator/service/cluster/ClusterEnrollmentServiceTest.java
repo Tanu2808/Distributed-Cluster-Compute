@@ -1,16 +1,15 @@
 package com.cluster.coordinator.service.cluster;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import com.cluster.coordinator.model.ClusterSettings;
 import com.cluster.coordinator.repository.ClusterSettingsRepository;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
-
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 public class ClusterEnrollmentServiceTest {
 
@@ -48,7 +47,10 @@ public class ClusterEnrollmentServiceTest {
 
     @Test
     public void testGetJoinCode_ReturnsExisting() {
-        when(settingsRepository.findById("CLUSTER_JOIN_CODE")).thenReturn(Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", "AAAA-BBBB-CCCC-DDDD")));
+        when(settingsRepository.findById("CLUSTER_JOIN_CODE"))
+                .thenReturn(
+                        Optional.of(
+                                new ClusterSettings("CLUSTER_JOIN_CODE", "AAAA-BBBB-CCCC-DDDD")));
 
         String code = enrollmentService.getJoinCode();
         assertEquals("AAAA-BBBB-CCCC-DDDD", code);
@@ -84,23 +86,28 @@ public class ClusterEnrollmentServiceTest {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Formatted code identical to stored value must succeed");
         assertEquals("test-cluster-id", result.getClusterId());
         assertEquals("http://localhost:8080", result.getCoordinatorUrl());
         assertNotNull(result.getRuntimeCredential());
-        
+
         verify(workerRepository).save(any());
     }
 
-    /** (b) Correct unformatted code (hyphens stripped — what the Worker actually sends) must succeed. */
+    /**
+     * (b) Correct unformatted code (hyphens stripped — what the Worker actually sends) must
+     * succeed.
+     */
     @Test
     public void testEnrollWorker_UnformattedCode_Succeeds() {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAABBBBCCCCDDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAABBBBCCCCDDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Bare (no-hyphen) form of the correct code must succeed");
         assertEquals("test-cluster-id", result.getClusterId());
@@ -113,7 +120,8 @@ public class ClusterEnrollmentServiceTest {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("aaaa-bbbb-cccc-dddd", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("aaaa-bbbb-cccc-dddd", "worker-123");
 
         assertTrue(result.isSuccess(), "Lowercase version of the correct code must succeed");
         assertNotNull(result.getRuntimeCredential());
@@ -125,7 +133,8 @@ public class ClusterEnrollmentServiceTest {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("  AAAA-BBBB-CCCC-DDDD  ", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("  AAAA-BBBB-CCCC-DDDD  ", "worker-123");
 
         assertTrue(result.isSuccess(), "Code with surrounding whitespace must succeed");
         assertNotNull(result.getRuntimeCredential());
@@ -137,7 +146,8 @@ public class ClusterEnrollmentServiceTest {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA BBBB CCCC DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA BBBB CCCC DDDD", "worker-123");
 
         assertTrue(result.isSuccess(), "Code with internal spaces instead of hyphens must succeed");
         assertNotNull(result.getRuntimeCredential());
@@ -149,7 +159,8 @@ public class ClusterEnrollmentServiceTest {
         when(settingsRepository.findById("CLUSTER_JOIN_CODE"))
                 .thenReturn(Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", STORED_CODE)));
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("ZZZZ-YYYY-XXXX-WWWW", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("ZZZZ-YYYY-XXXX-WWWW", "worker-123");
 
         assertFalse(result.isSuccess(), "Wrong code must not succeed");
         assertNull(result.getClusterId());
@@ -161,31 +172,48 @@ public class ClusterEnrollmentServiceTest {
     /** (f) Null and blank inputs must fail safely without throwing. */
     @Test
     public void testEnrollWorker_NullOrBlankCode_FailsSafely() {
-        assertFalse(enrollmentService.enrollWorker(null, "worker-123").isSuccess(), "null must return failure");
-        assertFalse(enrollmentService.enrollWorker("", "worker-123").isSuccess(), "empty string must return failure");
-        assertFalse(enrollmentService.enrollWorker("   ", "worker-123").isSuccess(), "blank string must return failure");
+        assertFalse(
+                enrollmentService.enrollWorker(null, "worker-123").isSuccess(),
+                "null must return failure");
+        assertFalse(
+                enrollmentService.enrollWorker("", "worker-123").isSuccess(),
+                "empty string must return failure");
+        assertFalse(
+                enrollmentService.enrollWorker("   ", "worker-123").isSuccess(),
+                "blank string must return failure");
 
-        assertFalse(enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", null).isSuccess(), "null workerId must fail");
-        assertFalse(enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "").isSuccess(), "empty workerId must fail");
+        assertFalse(
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", null).isSuccess(),
+                "null workerId must fail");
+        assertFalse(
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "").isSuccess(),
+                "empty workerId must fail");
 
         // No interaction with repository for null/blank inputs
         verify(settingsRepository, never()).findById(any());
         verify(workerRepository, never()).save(any());
     }
 
-    /** (g) Stored code in bare form must also be matched by formatted input (symmetric normalization). */
+    /**
+     * (g) Stored code in bare form must also be matched by formatted input (symmetric
+     * normalization).
+     */
     @Test
     public void testEnrollWorker_StoredInBareForm_FormattedInputSucceeds() {
         // If for any reason a bare code were stored, formatted input should still match.
         when(settingsRepository.findById("CLUSTER_JOIN_CODE"))
-                .thenReturn(Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", "AAAABBBBCCCCDDDD")));
+                .thenReturn(
+                        Optional.of(new ClusterSettings("CLUSTER_JOIN_CODE", "AAAABBBBCCCCDDDD")));
         when(settingsRepository.findById("CLUSTER_ID"))
                 .thenReturn(Optional.of(new ClusterSettings("CLUSTER_ID", "test-cluster-id")));
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
-        assertTrue(result.isSuccess(), "Normalization must be symmetric — formatted input matches bare stored value");
+        assertTrue(
+                result.isSuccess(),
+                "Normalization must be symmetric — formatted input matches bare stored value");
         assertNotNull(result.getRuntimeCredential());
     }
 
@@ -198,9 +226,11 @@ public class ClusterEnrollmentServiceTest {
     public void testEnrollWorker_ConfiguredAdvertisedUrl_ReturnsConfiguredUrl() {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
-        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", "http://192.168.1.100:8080");
+        ReflectionTestUtils.setField(
+                enrollmentService, "advertisedUrl", "http://192.168.1.100:8080");
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess());
         assertEquals("http://192.168.1.100:8080", result.getCoordinatorUrl());
@@ -211,9 +241,11 @@ public class ClusterEnrollmentServiceTest {
     public void testEnrollWorker_ConfiguredAdvertisedUrl_StripsTrailingSlash() {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
-        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", "http://192.168.1.100:8080/");
+        ReflectionTestUtils.setField(
+                enrollmentService, "advertisedUrl", "http://192.168.1.100:8080/");
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess());
         assertEquals("http://192.168.1.100:8080", result.getCoordinatorUrl());
@@ -227,10 +259,10 @@ public class ClusterEnrollmentServiceTest {
         ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", null);
         ReflectionTestUtils.setField(enrollmentService, "serverPort", "9090");
 
-        ClusterEnrollmentService.EnrollmentResult result = enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess());
         assertEquals("http://localhost:9090", result.getCoordinatorUrl());
     }
 }
-

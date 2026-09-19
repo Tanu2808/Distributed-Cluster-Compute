@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { taskApi } from '../services/taskApi';
-import type { WorkerTask } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { taskApi } from "../services/taskApi";
+import type { WorkerTask } from "../types";
 
 export function useTasks(pollingIntervalMs = 4000) {
   const [tasks, setTasks] = useState<WorkerTask[]>([]);
@@ -20,7 +20,9 @@ export function useTasks(pollingIntervalMs = 4000) {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch tasks",
+          );
         }
       } finally {
         if (mounted) {
@@ -45,7 +47,7 @@ export function useTasks(pollingIntervalMs = 4000) {
       setTasks(res);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+      setError(err instanceof Error ? err.message : "Failed to fetch tasks");
     } finally {
       setRefreshing(false);
       setLoading(false);

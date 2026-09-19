@@ -1,14 +1,14 @@
-import type { ClusterSettings } from '../types';
+import type { ClusterSettings } from "../types";
 
 export const mockSettings: ClusterSettings = {
   coordinator: {
-    hostname: 'coordinator.local',
+    hostname: "coordinator.local",
     port: 8080,
-    clusterId: 'cluster-7f4a2b1d',
-    clusterName: 'HomeCluster-Dev',
+    clusterId: "cluster-7f4a2b1d",
+    clusterName: "HomeCluster-Dev",
   },
   workerRegistration: {
-    registrationMode: 'TOKEN',
+    registrationMode: "TOKEN",
     requireAuthentication: true,
     heartbeatIntervalSeconds: 10,
     workerTimeoutSeconds: 30,
@@ -17,13 +17,13 @@ export const mockSettings: ClusterSettings = {
     maxCpuAllocationPercent: 90,
     maxMemoryAllocationPercent: 85,
     gpuAllocationEnabled: true,
-    perWorkerCpuLimit: 0,   // 0 = no limit
+    perWorkerCpuLimit: 0, // 0 = no limit
     perWorkerMemoryLimitGb: 0,
   },
   monitoring: {
     metricsCollectionIntervalSeconds: 5,
     eventRetentionDays: 30,
-    logLevel: 'INFO',
+    logLevel: "INFO",
     enableMetricsExport: false,
   },
 };

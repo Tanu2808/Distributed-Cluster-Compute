@@ -1,32 +1,12 @@
-# React + TypeScript + Vite
+# Worker Agent UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+The Worker Agent UI is an embedded React/Vite dashboard hosted by the Worker Agent's Spring Boot server. It provides a local interface for diagnosing the worker's connection to the cluster and viewing hardware metrics locally.
 
-Currently, two official plugins are available:
+## Key Architectural Files
+- `src/services/apiClient.ts`: Core wrapper for communicating with the Worker Agent's local HTTP API endpoints (`/api/...`).
+- `src/pages/Connection.tsx`: Dedicated page for displaying detailed STOMP connection diagnostics and latency.
+- `src/hooks/useWorkerStatus.ts`: React hook abstracting the retrieval of real-time metrics for the node.
+- `src/state/clusterStore.ts`: Global state for local node capabilities.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Build Process
+The UI is automatically built via the `frontend-maven-plugin` during the Worker Agent's Maven build phase. The Vite output is copied into `src/main/resources/static` and served directly by Spring Boot.

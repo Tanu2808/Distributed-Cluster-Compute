@@ -4,6 +4,11 @@ import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -18,12 +23,6 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-
 @Component
 public class WebSocketConnectionManager {
 
@@ -36,7 +35,7 @@ public class WebSocketConnectionManager {
 
     private final Object connectionLock = new Object();
     private final AtomicBoolean isConnecting = new AtomicBoolean(false);
-    
+
     // Diagnostics
     private volatile java.time.Instant connectedSince;
     private volatile java.time.Instant lastMessageTimestamp;
@@ -46,23 +45,25 @@ public class WebSocketConnectionManager {
     private volatile Consumer<StompSession> onConnectCallback;
     private volatile Runnable onDisconnectCallback;
 
-    public WebSocketConnectionManager(WorkerConfigurationStore configStore, @NonNull ObjectMapper objectMapper) {
+    public WebSocketConnectionManager(
+            WorkerConfigurationStore configStore, @NonNull ObjectMapper objectMapper) {
         this.configStore = configStore;
         this.stompClient = new WebSocketStompClient(new StandardWebSocketClient());
-        
+
         MappingJackson2MessageConverter converter = new MappingJackson2MessageConverter();
         converter.setObjectMapper(objectMapper);
         this.stompClient.setMessageConverter(converter);
-        
+
         this.taskScheduler = new ThreadPoolTaskScheduler();
         this.taskScheduler.setPoolSize(1);
         this.taskScheduler.setThreadNamePrefix("ws-stomp-");
         this.taskScheduler.initialize();
         this.stompClient.setTaskScheduler(taskScheduler);
-        this.stompClient.setDefaultHeartbeat(new long[]{10000, 10000});
+        this.stompClient.setDefaultHeartbeat(new long[] {10000, 10000});
     }
 
-    public void setCallbacks(Consumer<StompSession> onConnectCallback, Runnable onDisconnectCallback) {
+    public void setCallbacks(
+            Consumer<StompSession> onConnectCallback, Runnable onDisconnectCallback) {
         this.onConnectCallback = onConnectCallback;
         this.onDisconnectCallback = onDisconnectCallback;
     }
@@ -72,11 +73,25 @@ public class WebSocketConnectionManager {
         return session != null && session.isConnected();
     }
 
-    public java.time.Instant getConnectedSince() { return connectedSince; }
-    public java.time.Instant getLastMessageTimestamp() { return lastMessageTimestamp; }
-    public String getLastConnectionError() { return lastConnectionError; }
-    public int getReconnectCount() { return reconnectCount; }
-    public void resetReconnectCount() { reconnectCount = 0; }
+    public java.time.Instant getConnectedSince() {
+        return connectedSince;
+    }
+
+    public java.time.Instant getLastMessageTimestamp() {
+        return lastMessageTimestamp;
+    }
+
+    public String getLastConnectionError() {
+        return lastConnectionError;
+    }
+
+    public int getReconnectCount() {
+        return reconnectCount;
+    }
+
+    public void resetReconnectCount() {
+        reconnectCount = 0;
+    }
 
     public void connect() {
         synchronized (connectionLock) {
@@ -94,7 +109,9 @@ public class WebSocketConnectionManager {
         try {
             cleanupStaleSession();
 
-            if (configStore == null || configStore.getConfig() == null || configStore.getConfig().getCoordinatorUrl() == null) {
+            if (configStore == null
+                    || configStore.getConfig() == null
+                    || configStore.getConfig().getCoordinatorUrl() == null) {
                 log.warn("Worker configuration or coordinator URL not available. Cannot connect.");
                 this.lastConnectionError = "Missing coordinator configuration";
                 handleDisconnect();
@@ -102,8 +119,10 @@ public class WebSocketConnectionManager {
             }
 
             String coordinatorUrl = configStore.getConfig().getCoordinatorUrl();
-            String wsUrl = coordinatorUrl.replace("http://", "ws://").replace("https://", "wss://") + "/ws/coordinator";
-            
+            String wsUrl =
+                    coordinatorUrl.replace("http://", "ws://").replace("https://", "wss://")
+                            + "/ws/coordinator";
+
             WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
             String workerId = configStore.getWorkerId();
             String credential = configStore.getConfig().getEnrollmentCredential();
@@ -118,21 +137,23 @@ public class WebSocketConnectionManager {
             byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.UTF_8));
             String authHeader = "Basic " + new String(encodedAuth);
             headers.add("Authorization", authHeader);
-            
+
             StompHeaders stompHeaders = new StompHeaders();
 
             log.info("Connecting to WebSocket at {}", wsUrl);
             reconnectCount++;
 
-            StompSession newSession = stompClient.connectAsync(wsUrl, headers, stompHeaders, new StompSessionHandler())
-                    .get(5, TimeUnit.SECONDS);
+            StompSession newSession =
+                    stompClient
+                            .connectAsync(wsUrl, headers, stompHeaders, new StompSessionHandler())
+                            .get(5, TimeUnit.SECONDS);
 
             synchronized (connectionLock) {
                 this.stompSession = newSession;
                 this.connectedSince = java.time.Instant.now();
                 this.lastConnectionError = null;
             }
-            
+
             log.info("Connected successfully to WebSocket coordinator");
             Consumer<StompSession> callback = this.onConnectCallback;
             if (callback != null) {
@@ -165,7 +186,9 @@ public class WebSocketConnectionManager {
                 handleDisconnect();
             }
         } else {
-            log.warn("Cannot send message, WebSocket is not connected (destination: {})", destination);
+            log.warn(
+                    "Cannot send message, WebSocket is not connected (destination: {})",
+                    destination);
             this.lastConnectionError = "WebSocket not connected when sending message";
         }
     }
@@ -220,7 +243,8 @@ public class WebSocketConnectionManager {
 
     private class StompSessionHandler extends StompSessionHandlerAdapter {
         @Override
-        public void handleTransportError(@NonNull StompSession session, @NonNull Throwable exception) {
+        public void handleTransportError(
+                @NonNull StompSession session, @NonNull Throwable exception) {
             synchronized (connectionLock) {
                 if (session != stompSession && stompSession != null) {
                     log.debug("Ignoring transport error from obsolete session");
@@ -234,7 +258,12 @@ public class WebSocketConnectionManager {
         }
 
         @Override
-        public void handleException(@NonNull StompSession session, StompCommand command, @NonNull StompHeaders headers, @NonNull byte[] payload, @NonNull Throwable exception) {
+        public void handleException(
+                @NonNull StompSession session,
+                StompCommand command,
+                @NonNull StompHeaders headers,
+                @NonNull byte[] payload,
+                @NonNull Throwable exception) {
             synchronized (connectionLock) {
                 if (session != stompSession && stompSession != null) {
                     log.debug("Ignoring exception from obsolete session");
@@ -246,9 +275,10 @@ public class WebSocketConnectionManager {
             cleanupStaleSession();
             handleDisconnect();
         }
-        
+
         @Override
-        public void afterConnected(@NonNull StompSession session, @NonNull StompHeaders connectedHeaders) {
+        public void afterConnected(
+                @NonNull StompSession session, @NonNull StompHeaders connectedHeaders) {
             log.info("STOMP session handshake complete");
         }
     }

@@ -34,3 +34,9 @@ The Coordinator is the central **control plane** (Master) of the Distributed Com
 | `cluster.security.api-password` | `CLUSTER_SECURITY_API_PASSWORD` | `admin_secret` | Password for basic authentication |
 | `cluster.heartbeat.timeout-seconds` | `CLUSTER_HEARTBEAT_TIMEOUT_SECONDS` | `30` | Heartbeat timeout threshold in seconds |
 
+## Key Architectural Files
+- `ClusterController.java`: Handles HTTP endpoints for node enrollment and rotating join codes.
+- `JobController.java`: Manages the submission and status querying of distributed compute jobs.
+- `ClusterEnrollmentService.java`: Business logic for generating credentials and validating new workers.
+- `WorkerService.java`: Manages worker lifecycle, updates physical resource metrics, and syncs state to WebSockets.
+- `ClusterWebSocketHandler.java`: Manages persistent STOMP sessions with active workers.

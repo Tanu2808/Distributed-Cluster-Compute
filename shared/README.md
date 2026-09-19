@@ -18,6 +18,17 @@ This module ensures that both the **Coordinator** and **Worker Agents** share th
   * `TaskResultMessage`: Definition for storing the output result payload from a task execution.
   * `TaskCancellationMessage`: Instruction payload used to abort a running task remotely.
 
+## Key Architectural Files
+- `MessageEnvelope.java`: The standard STOMP WebSocket message wrapper used across the network.
+- `RegisterMessage.java`: Payload structure for initial node registration.
+- `TaskAssignmentMessage.java`: Payload structure assigning a compute partition to a worker.
+
+## Build Instructions
+
+```bash
+mvn clean install
+```
+
 ## Capabilities
 
 * Guarantees that parsing and serializing STOMP WebSocket messages never throw `NullPointerExceptions` due to mismatched properties or spelling errors in JSON structures across boundaries.

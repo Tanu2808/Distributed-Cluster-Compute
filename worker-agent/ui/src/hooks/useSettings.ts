@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { settingsApi } from '../services/settingsApi';
-import type { WorkerSettingsResponse, ClusterSettingsResponse } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { settingsApi } from "../services/settingsApi";
+import type { WorkerSettingsResponse, ClusterSettingsResponse } from "../types";
 
 export function useSettings() {
-  const [workerSettings, setWorkerSettings] = useState<WorkerSettingsResponse | null>(null);
-  const [clusterSettings, setClusterSettings] = useState<ClusterSettingsResponse | null>(null);
+  const [workerSettings, setWorkerSettings] =
+    useState<WorkerSettingsResponse | null>(null);
+  const [clusterSettings, setClusterSettings] =
+    useState<ClusterSettingsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,9 @@ export function useSettings() {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Unable to load settings.');
+          setError(
+            err instanceof Error ? err.message : "Unable to load settings.",
+          );
         }
       } finally {
         if (mounted) {
@@ -48,7 +52,7 @@ export function useSettings() {
       setClusterSettings(cluster);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to load settings.');
+      setError(err instanceof Error ? err.message : "Unable to load settings.");
     } finally {
       setRefreshing(false);
       setLoading(false);

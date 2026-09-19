@@ -1,5 +1,5 @@
-import { config } from '../utils/config';
-import type { WsMessage, ConnectionStatus } from '../types/api';
+import { config } from "../utils/config";
+import type { WsMessage, ConnectionStatus } from "../types/api";
 
 // ─── Listener Types ───────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ type StatusListener = (status: ConnectionStatus) => void;
  */
 class WebSocketService {
   private ws: WebSocket | null = null;
-  private status: ConnectionStatus = 'DISCONNECTED';
+  private status: ConnectionStatus = "DISCONNECTED";
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -56,7 +56,7 @@ class WebSocketService {
       this.ws.close();
       this.ws = null;
     }
-    this._setStatus('DISCONNECTED');
+    this._setStatus("DISCONNECTED");
   }
 
   /** Returns the current connection status. */
@@ -79,23 +79,25 @@ class WebSocketService {
   // ── Private Helpers ───────────────────────────────────────────────────────
 
   private _openConnection(): void {
-    this._setStatus(this.reconnectAttempts === 0 ? 'CONNECTING' : 'RECONNECTING');
+    this._setStatus(
+      this.reconnectAttempts === 0 ? "CONNECTING" : "RECONNECTING",
+    );
 
     try {
       // Pass credentials via Sec-WebSocket-Protocol to avoid exposing them in URL query params
       // The backend will extract and validate them during the handshake.
       const authString = btoa(`${config.API_USERNAME}:${config.API_PASSWORD}`);
-      this.ws = new WebSocket(config.WS_URL, ['basic', authString]);
+      this.ws = new WebSocket(config.WS_URL, ["basic", authString]);
     } catch (err) {
-      console.error('[WS] Failed to create WebSocket:', err);
+      console.error("[WS] Failed to create WebSocket:", err);
       this._scheduleReconnect();
       return;
     }
 
     this.ws.onopen = () => {
-      console.info('[WS] Connected to', config.WS_URL);
+      console.info("[WS] Connected to", config.WS_URL);
       this.reconnectAttempts = 0;
-      this._setStatus('CONNECTED');
+      this._setStatus("CONNECTED");
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
@@ -103,7 +105,7 @@ class WebSocketService {
         const message = JSON.parse(event.data) as WsMessage;
         this._emit(message);
       } catch (err) {
-        console.warn('[WS] Failed to parse message:', event.data, err);
+        console.warn("[WS] Failed to parse message:", event.data, err);
       }
     };
 
@@ -114,15 +116,15 @@ class WebSocketService {
     };
 
     this.ws.onerror = (event: Event) => {
-      console.error('[WS] Error:', event);
+      console.error("[WS] Error:", event);
       // onclose will fire after onerror; reconnect is handled there
     };
   }
 
   private _scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.MAX_RETRIES) {
-      console.error('[WS] Max reconnect attempts reached. Giving up.');
-      this._setStatus('FAILED');
+      console.error("[WS] Max reconnect attempts reached. Giving up.");
+      this._setStatus("FAILED");
       return;
     }
 
@@ -131,8 +133,10 @@ class WebSocketService {
       this.MAX_DELAY_MS,
     );
     this.reconnectAttempts++;
-    console.info(`[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.MAX_RETRIES})`);
-    this._setStatus('RECONNECTING');
+    console.info(
+      `[WS] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.MAX_RETRIES})`,
+    );
+    this._setStatus("RECONNECTING");
 
     this.reconnectTimer = setTimeout(() => {
       this._openConnection();
@@ -149,11 +153,11 @@ class WebSocketService {
   private _setStatus(status: ConnectionStatus): void {
     if (this.status === status) return;
     this.status = status;
-    this.statusListeners.forEach(fn => fn(status));
+    this.statusListeners.forEach((fn) => fn(status));
   }
 
   private _emit(message: WsMessage): void {
-    this.messageListeners.forEach(fn => fn(message));
+    this.messageListeners.forEach((fn) => fn(message));
   }
 }
 

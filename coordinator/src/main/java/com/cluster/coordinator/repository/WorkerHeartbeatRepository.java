@@ -7,5 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface WorkerHeartbeatRepository extends JpaRepository<WorkerHeartbeat, Long> {
     void deleteByWorkerId(String workerId);
+
     java.util.Optional<WorkerHeartbeat> findTopByWorkerIdOrderByTimestampDesc(String workerId);
 }

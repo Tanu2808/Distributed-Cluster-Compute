@@ -6,41 +6,29 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 public class WorkerRegistrationRequest {
 
-    @NotBlank
-    private String id;
+    @NotBlank private String id;
 
-    @NotBlank
-    private String name;
+    @NotBlank private String name;
 
-    @NotBlank
-    private String hostname;
+    @NotBlank private String hostname;
 
-    @NotBlank
-    private String ipAddress;
+    @NotBlank private String ipAddress;
 
-    @NotBlank
-    private String operatingSystem;
+    @NotBlank private String operatingSystem;
 
-    @NotBlank
-    private String architecture;
+    @NotBlank private String architecture;
 
-    @NotBlank
-    private String agentVersion;
+    @NotBlank private String agentVersion;
 
-    @Positive
-    private int cpuCores;
+    @Positive private int cpuCores;
 
-    @Positive
-    private long memoryRamMb;
+    @Positive private long memoryRamMb;
 
-    @PositiveOrZero
-    private int gpuCount;
+    @PositiveOrZero private int gpuCount;
 
-    @PositiveOrZero
-    private long storageMb;
+    @PositiveOrZero private long storageMb;
 
-    @PositiveOrZero
-    private long networkBps;
+    @PositiveOrZero private long networkBps;
 
     // Getters and Setters
     public String getId() {

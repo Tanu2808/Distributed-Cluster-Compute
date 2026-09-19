@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { workerApi } from '../services/workerApi';
-import type { WorkerStatusResponse, WorkerInfoResponse } from '../types';
+import { useState, useEffect } from "react";
+import { workerApi } from "../services/workerApi";
+import type { WorkerStatusResponse, WorkerInfoResponse } from "../types";
 
 export function useWorkerStatus(pollingIntervalMs = 5000) {
   const [status, setStatus] = useState<WorkerStatusResponse | null>(null);
@@ -15,7 +15,7 @@ export function useWorkerStatus(pollingIntervalMs = 5000) {
       try {
         const [statusRes, infoRes] = await Promise.all([
           workerApi.getStatus(),
-          workerApi.getInfo()
+          workerApi.getInfo(),
         ]);
         if (mounted) {
           setStatus(statusRes);
@@ -24,8 +24,12 @@ export function useWorkerStatus(pollingIntervalMs = 5000) {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch worker status');
-          setStatus({ status: 'UNKNOWN' });
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to fetch worker status",
+          );
+          setStatus({ status: "UNKNOWN" });
         }
       } finally {
         if (mounted) setLoading(false);

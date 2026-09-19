@@ -26,7 +26,8 @@ public class OshiCpuMetricsProvider implements CpuMetricsProvider {
     @Override
     public double getCpuUsagePercent() {
         // Simple usage estimation. OSHI usually requires waiting a bit between ticks.
-        // A full implementation would store prev ticks. For simplicity, we just return system load or a proxy.
+        // A full implementation would store prev ticks. For simplicity, we just return system load
+        // or a proxy.
         double[] load = processor.getSystemLoadAverage(1);
         if (load[0] < 0) {
             return 0.0;

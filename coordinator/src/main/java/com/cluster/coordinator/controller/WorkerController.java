@@ -7,10 +7,9 @@ import com.cluster.coordinator.model.Worker;
 import com.cluster.coordinator.service.HeartbeatService;
 import com.cluster.coordinator.service.WorkerService;
 import jakarta.validation.Valid;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/workers")
@@ -31,20 +30,22 @@ public class WorkerController {
 
     @GetMapping("/{workerId}")
     public ResponseEntity<WorkerResponseDto> getWorker(@PathVariable String workerId) {
-        return workerService.getWorkerDto(workerId)
+        return workerService
+                .getWorkerDto(workerId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Worker> registerWorker(@Valid @RequestBody WorkerRegistrationRequest request) {
+    public ResponseEntity<Worker> registerWorker(
+            @Valid @RequestBody WorkerRegistrationRequest request) {
         Worker worker = workerService.registerWorker(request);
         return ResponseEntity.ok(worker);
     }
 
     @PostMapping("/{workerId}/heartbeat")
-    public ResponseEntity<Void> processHeartbeat(@PathVariable String workerId,
-                                                 @Valid @RequestBody WorkerHeartbeatRequest request) {
+    public ResponseEntity<Void> processHeartbeat(
+            @PathVariable String workerId, @Valid @RequestBody WorkerHeartbeatRequest request) {
         try {
             heartbeatService.processHeartbeat(workerId, request);
             return ResponseEntity.ok().build();

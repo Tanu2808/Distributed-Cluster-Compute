@@ -1,8 +1,8 @@
 package com.cluster.worker.task;
 
-import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.stereotype.Component;
 
 @Component
 public class ComputeTaskHandler implements TaskHandler {
@@ -39,7 +39,8 @@ public class ComputeTaskHandler implements TaskHandler {
         } else if ("fibonacci".equalsIgnoreCase(operation)) {
             int n = (int) getNumber(input, "n");
             if (n < 0 || n > 1000) {
-                throw new IllegalArgumentException("Fibonacci n must be between 0 and 1000 for safety bounds");
+                throw new IllegalArgumentException(
+                        "Fibonacci n must be between 0 and 1000 for safety bounds");
             }
             result.put("result", computeFibonacci(n, task));
         } else {
@@ -47,7 +48,8 @@ public class ComputeTaskHandler implements TaskHandler {
         }
 
         if (Thread.currentThread().isInterrupted() || (task != null && task.isCancelled())) {
-            throw new InterruptedException("Task execution cancelled or interrupted before completing");
+            throw new InterruptedException(
+                    "Task execution cancelled or interrupted before completing");
         }
 
         return result;
@@ -69,7 +71,8 @@ public class ComputeTaskHandler implements TaskHandler {
         long prev = 0, curr = 1;
         for (int i = 2; i <= n; i++) {
             if (Thread.currentThread().isInterrupted() || (task != null && task.isCancelled())) {
-                throw new InterruptedException("Computation interrupted during fibonacci calculation");
+                throw new InterruptedException(
+                        "Computation interrupted during fibonacci calculation");
             }
             long next = prev + curr;
             prev = curr;

@@ -1,19 +1,18 @@
 package com.cluster.worker.persistence;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class WorkerConfigurationStoreTest {
 
-    @Mock
-    private LocalStateStore stateStore;
+    @Mock private LocalStateStore stateStore;
 
     private WorkerConfigurationStore configStore;
 
@@ -47,7 +46,8 @@ class WorkerConfigurationStoreTest {
 
     @Test
     void testInitValidFileLoadsConfig() {
-        String validJson = "{\"version\":1,\"workerId\":\"test-id\",\"clusterId\":\"c-id\",\"coordinatorUrl\":\"http://local\"}";
+        String validJson =
+                "{\"version\":1,\"workerId\":\"test-id\",\"clusterId\":\"c-id\",\"coordinatorUrl\":\"http://local\"}";
         when(stateStore.readState()).thenReturn(validJson);
 
         configStore.init();
@@ -63,14 +63,15 @@ class WorkerConfigurationStoreTest {
 
     @Test
     void testResetConfigurationKeepsWorkerId() {
-        String validJson = "{\"version\":1,\"workerId\":\"test-id\",\"clusterId\":\"c-id\",\"coordinatorUrl\":\"http://local\"}";
+        String validJson =
+                "{\"version\":1,\"workerId\":\"test-id\",\"clusterId\":\"c-id\",\"coordinatorUrl\":\"http://local\"}";
         when(stateStore.readState()).thenReturn(validJson);
 
         configStore.init();
         assertTrue(configStore.isConfigured());
 
         configStore.resetConfiguration();
-        
+
         assertFalse(configStore.isConfigured());
         assertEquals("test-id", configStore.getWorkerId());
         assertNull(configStore.getConfig().getClusterId());

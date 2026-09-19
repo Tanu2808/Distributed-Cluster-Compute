@@ -1,5 +1,5 @@
-import { apiGet } from './client';
-import type { ClusterEvent } from '../types';
+import { apiGet } from "./client";
+import type { ClusterEvent } from "../types";
 
 /**
  * GET /api/cluster/events
@@ -7,5 +7,5 @@ import type { ClusterEvent } from '../types';
  * ordered from oldest to newest.
  */
 export function fetchEvents(): Promise<ClusterEvent[]> {
-  return apiGet<ClusterEvent[]>('/api/cluster/events');
+  return apiGet<ClusterEvent[]>("/api/cluster/events");
 }

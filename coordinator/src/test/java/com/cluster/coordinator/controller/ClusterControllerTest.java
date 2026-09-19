@@ -1,15 +1,14 @@
 package com.cluster.coordinator.controller;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.*;
+
 import com.cluster.coordinator.service.cluster.ClusterEnrollmentService;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
 
 public class ClusterControllerTest {
 
@@ -46,10 +45,14 @@ public class ClusterControllerTest {
 
     @Test
     public void testEnrollWorker_Success() {
-        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(true, "test-cluster", "http://localhost:8080", "mocked-runtime-credential");
+        ClusterEnrollmentService.EnrollmentResult result =
+                new ClusterEnrollmentService.EnrollmentResult(
+                        true, "test-cluster", "http://localhost:8080", "mocked-runtime-credential");
         when(enrollmentService.enrollWorker("VALID-CODE", "worker-123")).thenReturn(result);
 
-        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "VALID-CODE", "workerId", "worker-123"));
+        ResponseEntity<Map<String, String>> response =
+                clusterController.enrollWorker(
+                        Map.of("joinCode", "VALID-CODE", "workerId", "worker-123"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("test-cluster", response.getBody().get("clusterId"));
@@ -59,10 +62,13 @@ public class ClusterControllerTest {
 
     @Test
     public void testEnrollWorker_Failure() {
-        ClusterEnrollmentService.EnrollmentResult result = new ClusterEnrollmentService.EnrollmentResult(false, null, null, null);
+        ClusterEnrollmentService.EnrollmentResult result =
+                new ClusterEnrollmentService.EnrollmentResult(false, null, null, null);
         when(enrollmentService.enrollWorker("INVALID-CODE", "worker-123")).thenReturn(result);
 
-        ResponseEntity<Map<String, String>> response = clusterController.enrollWorker(Map.of("joinCode", "INVALID-CODE", "workerId", "worker-123"));
+        ResponseEntity<Map<String, String>> response =
+                clusterController.enrollWorker(
+                        Map.of("joinCode", "INVALID-CODE", "workerId", "worker-123"));
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertEquals(null, response.getBody());

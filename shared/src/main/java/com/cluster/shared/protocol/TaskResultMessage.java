@@ -20,10 +20,9 @@ public class TaskResultMessage {
     private String jobId;
     private Integer partitionId;
 
-    /**
-     * Backward-compatible constructor for non-partitioned task results.
-     */
-    public TaskResultMessage(String taskId, String status, Object result, long executionDurationMs, String error) {
+    /** Backward-compatible constructor for non-partitioned task results. */
+    public TaskResultMessage(
+            String taskId, String status, Object result, long executionDurationMs, String error) {
         this.taskId = taskId;
         this.status = status;
         this.result = result;

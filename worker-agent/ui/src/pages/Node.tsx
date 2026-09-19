@@ -1,28 +1,31 @@
-import { useState } from 'react';
-import { RefreshCw, Download, Copy, Check } from 'lucide-react';
-import { useDashboardNode } from '../hooks/useDashboardNode';
-import { useWorkerStatus } from '../hooks/useWorkerStatus';
-import { useDashboardHome } from '../hooks/useDashboardHome';
+import { useState } from "react";
+import { RefreshCw, Download, Copy, Check } from "lucide-react";
+import { useDashboardNode } from "../hooks/useDashboardNode";
+import { useWorkerStatus } from "../hooks/useWorkerStatus";
+import { useDashboardHome } from "../hooks/useDashboardHome";
 import {
   ConsoleCard,
   KeyValueTable,
   StatusBadge,
   AlertBanner,
   Skeleton,
-} from '../components';
+} from "../components";
 
 function formatBytes(bytes?: number): string {
-  if (bytes === undefined || bytes === null || isNaN(bytes) || bytes < 0) return 'Unavailable';
-  if (bytes === 0) return '0 B';
+  if (bytes === undefined || bytes === null || isNaN(bytes) || bytes < 0)
+    return "Unavailable";
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  if (i >= sizes.length) return `${(bytes / Math.pow(k, sizes.length - 1)).toFixed(2)} TB`;
+  if (i >= sizes.length)
+    return `${(bytes / Math.pow(k, sizes.length - 1)).toFixed(2)} TB`;
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
 function formatMb(mb?: number): string {
-  if (mb === undefined || mb === null || isNaN(mb) || mb < 0) return 'Unavailable';
+  if (mb === undefined || mb === null || isNaN(mb) || mb < 0)
+    return "Unavailable";
   if (mb >= 1024) {
     return `${(mb / 1024).toFixed(1)} GB`;
   }
@@ -30,7 +33,13 @@ function formatMb(mb?: number): string {
 }
 
 export default function Node() {
-  const { data: nodeData, loading, refreshing, error, refetch } = useDashboardNode(5000);
+  const {
+    data: nodeData,
+    loading,
+    refreshing,
+    error,
+    refetch,
+  } = useDashboardNode(5000);
   const { status, info } = useWorkerStatus(5000);
   const { data: homeData } = useDashboardHome(5000);
 
@@ -47,73 +56,95 @@ export default function Node() {
     const diagnostics = {
       exportedAt: new Date().toISOString(),
       workerIdentity: {
-        workerId: info?.workerId || 'unavailable',
-        hostname: homeData?.workerHostname || 'unavailable',
-        status: status?.lifecycleState || 'unavailable',
-        executionState: status?.executionState || 'unavailable',
+        workerId: info?.workerId || "unavailable",
+        hostname: homeData?.workerHostname || "unavailable",
+        status: status?.lifecycleState || "unavailable",
+        executionState: status?.executionState || "unavailable",
       },
       system: {
-        osName: nodeData?.osName || 'unavailable',
-        osVersion: nodeData?.osVersion || 'unavailable',
-        architecture: nodeData?.architecture || 'unavailable',
-        agentVersion: nodeData?.agentVersion || 'unavailable',
+        osName: nodeData?.osName || "unavailable",
+        osVersion: nodeData?.osVersion || "unavailable",
+        architecture: nodeData?.architecture || "unavailable",
+        agentVersion: nodeData?.agentVersion || "unavailable",
       },
       processor: {
-        model: nodeData?.cpuModel || 'unavailable',
-        cores: homeData?.cpuCores ?? 'unavailable',
-        utilizationPercent: nodeData?.cpuUsagePercent ?? 'unavailable',
+        model: nodeData?.cpuModel || "unavailable",
+        cores: homeData?.cpuCores ?? "unavailable",
+        utilizationPercent: nodeData?.cpuUsagePercent ?? "unavailable",
       },
       memory: {
-        usedMb: nodeData?.memoryUsedMb ?? 'unavailable',
-        totalMb: nodeData?.memoryTotalMb ?? 'unavailable',
+        usedMb: nodeData?.memoryUsedMb ?? "unavailable",
+        totalMb: nodeData?.memoryTotalMb ?? "unavailable",
       },
       storage: {
-        usedMb: nodeData?.diskUsedMb ?? 'unavailable',
-        totalMb: nodeData?.diskTotalMb ?? 'unavailable',
+        usedMb: nodeData?.diskUsedMb ?? "unavailable",
+        totalMb: nodeData?.diskTotalMb ?? "unavailable",
       },
       network: {
-        bytesSent: nodeData?.networkBytesSent ?? 'unavailable',
-        bytesReceived: nodeData?.networkBytesReceived ?? 'unavailable',
+        bytesSent: nodeData?.networkBytesSent ?? "unavailable",
+        bytesReceived: nodeData?.networkBytesReceived ?? "unavailable",
       },
       gpu: {
-        detected: typeof nodeData?.gpuCount === 'number' && nodeData.gpuCount > 0,
-        count: nodeData?.gpuCount ?? 'unavailable',
+        detected:
+          typeof nodeData?.gpuCount === "number" && nodeData.gpuCount > 0,
+        count: nodeData?.gpuCount ?? "unavailable",
       },
     };
 
-    const blob = new Blob([JSON.stringify(diagnostics, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(diagnostics, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `worker-node-diagnostics-${info?.workerId || 'node'}-${Date.now()}.json`;
+    a.download = `worker-node-diagnostics-${info?.workerId || "node"}-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   // Safe Metric Computations
-  const cpuValid = typeof nodeData?.cpuUsagePercent === 'number' && !isNaN(nodeData.cpuUsagePercent) && nodeData.cpuUsagePercent >= 0;
-  const cpuPercent = cpuValid ? Math.min(100, Math.max(0, nodeData!.cpuUsagePercent)) : undefined;
-
-  const memTotalValid = typeof nodeData?.memoryTotalMb === 'number' && nodeData.memoryTotalMb > 0;
-  const memUsedValid = typeof nodeData?.memoryUsedMb === 'number' && nodeData.memoryUsedMb >= 0;
-  const memPercent = memTotalValid && memUsedValid
-    ? Math.min(100, Math.max(0, (nodeData!.memoryUsedMb / nodeData!.memoryTotalMb) * 100))
-    : undefined;
-  const memAvailableMb = memTotalValid && memUsedValid
-    ? Math.max(0, nodeData!.memoryTotalMb - nodeData!.memoryUsedMb)
+  const cpuValid =
+    typeof nodeData?.cpuUsagePercent === "number" &&
+    !isNaN(nodeData.cpuUsagePercent) &&
+    nodeData.cpuUsagePercent >= 0;
+  const cpuPercent = cpuValid
+    ? Math.min(100, Math.max(0, nodeData!.cpuUsagePercent))
     : undefined;
 
-  const diskTotalValid = typeof nodeData?.diskTotalMb === 'number' && nodeData.diskTotalMb > 0;
-  const diskUsedValid = typeof nodeData?.diskUsedMb === 'number' && nodeData.diskUsedMb >= 0;
-  const diskPercent = diskTotalValid && diskUsedValid
-    ? Math.min(100, Math.max(0, (nodeData!.diskUsedMb / nodeData!.diskTotalMb) * 100))
-    : undefined;
-  const diskAvailableMb = diskTotalValid && diskUsedValid
-    ? Math.max(0, nodeData!.diskTotalMb - nodeData!.diskUsedMb)
-    : undefined;
+  const memTotalValid =
+    typeof nodeData?.memoryTotalMb === "number" && nodeData.memoryTotalMb > 0;
+  const memUsedValid =
+    typeof nodeData?.memoryUsedMb === "number" && nodeData.memoryUsedMb >= 0;
+  const memPercent =
+    memTotalValid && memUsedValid
+      ? Math.min(
+          100,
+          Math.max(0, (nodeData!.memoryUsedMb / nodeData!.memoryTotalMb) * 100),
+        )
+      : undefined;
+  const memAvailableMb =
+    memTotalValid && memUsedValid
+      ? Math.max(0, nodeData!.memoryTotalMb - nodeData!.memoryUsedMb)
+      : undefined;
+
+  const diskTotalValid =
+    typeof nodeData?.diskTotalMb === "number" && nodeData.diskTotalMb > 0;
+  const diskUsedValid =
+    typeof nodeData?.diskUsedMb === "number" && nodeData.diskUsedMb >= 0;
+  const diskPercent =
+    diskTotalValid && diskUsedValid
+      ? Math.min(
+          100,
+          Math.max(0, (nodeData!.diskUsedMb / nodeData!.diskTotalMb) * 100),
+        )
+      : undefined;
+  const diskAvailableMb =
+    diskTotalValid && diskUsedValid
+      ? Math.max(0, nodeData!.diskTotalMb - nodeData!.diskUsedMb)
+      : undefined;
 
   const gpuCount = nodeData?.gpuCount;
-  const gpuDetected = typeof gpuCount === 'number' && gpuCount > 0;
+  const gpuDetected = typeof gpuCount === "number" && gpuCount > 0;
 
   // Initial Loading Skeleton
   if (loading && !nodeData) {
@@ -144,7 +175,7 @@ export default function Node() {
           <h1 className="text-base font-semibold tracking-tight text-console-text">
             Node Status
           </h1>
-          <StatusBadge status={status?.lifecycleState || 'ONLINE'} />
+          <StatusBadge status={status?.lifecycleState || "ONLINE"} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -166,7 +197,9 @@ export default function Node() {
             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-console-text hover:bg-slate-50 bg-white border border-console-border hover:border-slate-400 rounded-sm transition-colors disabled:opacity-50"
             title="Refresh node status"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? "animate-spin" : ""}`}
+            />
             <span>Refresh</span>
           </button>
         </div>
@@ -200,7 +233,7 @@ export default function Node() {
               columns={1}
               items={[
                 {
-                  label: 'Worker ID',
+                  label: "Worker ID",
                   mono: true,
                   value: info?.workerId ? (
                     <button
@@ -209,7 +242,9 @@ export default function Node() {
                       className="inline-flex items-center gap-1.5 hover:text-console-accent text-console-text transition-colors"
                       title="Click to copy Worker ID"
                     >
-                      <span className="truncate max-w-[220px] md:max-w-[320px]">{info.workerId}</span>
+                      <span className="truncate max-w-[220px] md:max-w-[320px]">
+                        {info.workerId}
+                      </span>
                       {copiedId ? (
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       ) : (
@@ -217,24 +252,26 @@ export default function Node() {
                       )}
                     </button>
                   ) : (
-                    'Unavailable'
+                    "Unavailable"
                   ),
                 },
                 {
-                  label: 'Hostname',
-                  value: homeData?.workerHostname || 'Unavailable',
+                  label: "Hostname",
+                  value: homeData?.workerHostname || "Unavailable",
                 },
                 {
-                  label: 'Operating System',
-                  value: nodeData?.osName ? `${nodeData.osName} ${nodeData.osVersion || ''}`.trim() : 'Unavailable',
+                  label: "Operating System",
+                  value: nodeData?.osName
+                    ? `${nodeData.osName} ${nodeData.osVersion || ""}`.trim()
+                    : "Unavailable",
                 },
                 {
-                  label: 'Architecture',
-                  value: nodeData?.architecture || 'Unavailable',
+                  label: "Architecture",
+                  value: nodeData?.architecture || "Unavailable",
                 },
                 {
-                  label: 'Agent Version',
-                  value: nodeData?.agentVersion || 'Unavailable',
+                  label: "Agent Version",
+                  value: nodeData?.agentVersion || "Unavailable",
                 },
               ]}
             />
@@ -250,7 +287,9 @@ export default function Node() {
                     CPU Utilization
                   </span>
                   <span className="font-mono font-semibold text-console-text">
-                    {cpuPercent !== undefined ? `${cpuPercent.toFixed(1)}%` : 'Unavailable'}
+                    {cpuPercent !== undefined
+                      ? `${cpuPercent.toFixed(1)}%`
+                      : "Unavailable"}
                   </span>
                 </div>
 
@@ -258,10 +297,10 @@ export default function Node() {
                   <div
                     className={`h-full transition-all duration-300 ${
                       cpuPercent && cpuPercent >= 90
-                        ? 'bg-rose-500'
+                        ? "bg-rose-500"
                         : cpuPercent && cpuPercent >= 75
-                        ? 'bg-amber-500'
-                        : 'bg-console-accent'
+                          ? "bg-amber-500"
+                          : "bg-console-accent"
                     }`}
                     style={{ width: `${cpuPercent ?? 0}%` }}
                   />
@@ -272,12 +311,14 @@ export default function Node() {
                 columns={1}
                 items={[
                   {
-                    label: 'Model',
-                    value: nodeData?.cpuModel || 'Unavailable',
+                    label: "Model",
+                    value: nodeData?.cpuModel || "Unavailable",
                   },
                   {
-                    label: 'Cores',
-                    value: homeData?.cpuCores ? `${homeData.cpuCores} cores` : 'Unavailable',
+                    label: "Cores",
+                    value: homeData?.cpuCores
+                      ? `${homeData.cpuCores} cores`
+                      : "Unavailable",
                   },
                 ]}
               />
@@ -297,7 +338,9 @@ export default function Node() {
                     Memory Utilization
                   </span>
                   <span className="font-mono font-semibold text-console-text">
-                    {memPercent !== undefined ? `${memPercent.toFixed(1)}%` : 'Unavailable'}
+                    {memPercent !== undefined
+                      ? `${memPercent.toFixed(1)}%`
+                      : "Unavailable"}
                   </span>
                 </div>
 
@@ -305,10 +348,10 @@ export default function Node() {
                   <div
                     className={`h-full transition-all duration-300 ${
                       memPercent && memPercent >= 90
-                        ? 'bg-rose-500'
+                        ? "bg-rose-500"
                         : memPercent && memPercent >= 75
-                        ? 'bg-amber-500'
-                        : 'bg-console-accent'
+                          ? "bg-amber-500"
+                          : "bg-console-accent"
                     }`}
                     style={{ width: `${memPercent ?? 0}%` }}
                   />
@@ -319,15 +362,15 @@ export default function Node() {
                 columns={1}
                 items={[
                   {
-                    label: 'Used Memory',
+                    label: "Used Memory",
                     value: formatMb(nodeData?.memoryUsedMb),
                   },
                   {
-                    label: 'Available Memory',
+                    label: "Available Memory",
                     value: formatMb(memAvailableMb),
                   },
                   {
-                    label: 'Total Memory',
+                    label: "Total Memory",
                     value: formatMb(nodeData?.memoryTotalMb),
                   },
                 ]}
@@ -345,7 +388,9 @@ export default function Node() {
                     Storage Utilization
                   </span>
                   <span className="font-mono font-semibold text-console-text">
-                    {diskPercent !== undefined ? `${diskPercent.toFixed(1)}%` : 'Unavailable'}
+                    {diskPercent !== undefined
+                      ? `${diskPercent.toFixed(1)}%`
+                      : "Unavailable"}
                   </span>
                 </div>
 
@@ -353,10 +398,10 @@ export default function Node() {
                   <div
                     className={`h-full transition-all duration-300 ${
                       diskPercent && diskPercent >= 90
-                        ? 'bg-rose-500'
+                        ? "bg-rose-500"
                         : diskPercent && diskPercent >= 75
-                        ? 'bg-amber-500'
-                        : 'bg-console-accent'
+                          ? "bg-amber-500"
+                          : "bg-console-accent"
                     }`}
                     style={{ width: `${diskPercent ?? 0}%` }}
                   />
@@ -367,15 +412,15 @@ export default function Node() {
                 columns={1}
                 items={[
                   {
-                    label: 'Used Storage',
+                    label: "Used Storage",
                     value: formatMb(nodeData?.diskUsedMb),
                   },
                   {
-                    label: 'Available Storage',
+                    label: "Available Storage",
                     value: formatMb(diskAvailableMb),
                   },
                   {
-                    label: 'Total Storage',
+                    label: "Total Storage",
                     value: formatMb(nodeData?.diskTotalMb),
                   },
                 ]}
@@ -389,20 +434,20 @@ export default function Node() {
               columns={1}
               items={[
                 {
-                  label: 'Bytes Sent',
+                  label: "Bytes Sent",
                   mono: true,
                   value: formatBytes(nodeData?.networkBytesSent),
                 },
                 {
-                  label: 'Bytes Received',
+                  label: "Bytes Received",
                   mono: true,
                   value: formatBytes(nodeData?.networkBytesReceived),
                 },
                 {
-                  label: 'GPU',
+                  label: "GPU",
                   value: gpuDetected ? (
                     <span className="text-emerald-700 font-mono font-medium">
-                      {gpuCount} unit{gpuCount > 1 ? 's' : ''} detected
+                      {gpuCount} unit{gpuCount > 1 ? "s" : ""} detected
                     </span>
                   ) : (
                     <span className="text-console-textDim font-medium">

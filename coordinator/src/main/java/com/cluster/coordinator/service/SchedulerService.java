@@ -7,20 +7,18 @@ import com.cluster.coordinator.repository.WorkerRepository;
 import com.cluster.shared.protocol.MessageEnvelope;
 import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.TaskAssignmentMessage;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
 
 @Service
 public class SchedulerService {
@@ -34,12 +32,13 @@ public class SchedulerService {
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
-    public SchedulerService(TaskRepository taskRepository,
-                            WorkerRepository workerRepository,
-                            JobRepository jobRepository,
-                            ResourceReservationService resourceReservationService,
-                            SimpMessagingTemplate messagingTemplate,
-                            ObjectMapper objectMapper) {
+    public SchedulerService(
+            TaskRepository taskRepository,
+            WorkerRepository workerRepository,
+            JobRepository jobRepository,
+            ResourceReservationService resourceReservationService,
+            SimpMessagingTemplate messagingTemplate,
+            ObjectMapper objectMapper) {
         this.taskRepository = taskRepository;
         this.workerRepository = workerRepository;
         this.jobRepository = jobRepository;
@@ -72,48 +71,58 @@ public class SchedulerService {
     }
 
     private void scheduleTask(Task task, List<Worker> onlineWorkers) {
-        Worker selectedWorker = onlineWorkers.stream()
-                .filter(worker -> isWorkerEligible(worker, task))
-                .min(workerComparator())
-                .orElse(null);
+        Worker selectedWorker =
+                onlineWorkers.stream()
+                        .filter(worker -> isWorkerEligible(worker, task))
+                        .min(workerComparator())
+                        .orElse(null);
 
         if (selectedWorker != null) {
             log.info("Scheduling task {} to worker {}", task.getId(), selectedWorker.getId());
-            
+
             // 1. reserve/create assignment
-            resourceReservationService.reserve(selectedWorker.getId(), task.getId(), 
-                                               task.getRequiredCpu(), task.getRequiredMemory());
-            
+            resourceReservationService.reserve(
+                    selectedWorker.getId(), task.getId(),
+                    task.getRequiredCpu(), task.getRequiredMemory());
+
             // 2. persist scheduling state
             task.setState(TaskState.ASSIGNED);
             taskRepository.save(task);
 
             Job job = jobRepository.findById(task.getJobId()).orElseThrow();
-            
+
             // 3. send TASK_ASSIGN
             try {
-                Map<String, Object> inputMap = objectMapper.readValue(task.getInput(), new TypeReference<Map<String, Object>>() {});
-                
-                TaskAssignmentMessage msgPayload = TaskAssignmentMessage.builder()
-                        .taskId(task.getId())
-                        .jobId(job.getId())
-                        .taskType(task.getTaskType())
-                        .input(inputMap)
-                        .requiredCpuCores(task.getRequiredCpu())
-                        .requiredMemoryMb(task.getRequiredMemory())
-                        .partitionId(task.getPartitionId())
-                        .totalPartitions(job.getTotalPartitions())
-                        .build();
+                Map<String, Object> inputMap =
+                        objectMapper.readValue(
+                                task.getInput(), new TypeReference<Map<String, Object>>() {});
 
-                MessageEnvelope<TaskAssignmentMessage> envelope = MessageEnvelope.<TaskAssignmentMessage>builder()
-                        .type(MessageType.TASK_ASSIGN)
-                        .workerId(selectedWorker.getId())
-                        .timestamp(Instant.now())
-                        .payload(msgPayload)
-                        .build();
+                TaskAssignmentMessage msgPayload =
+                        TaskAssignmentMessage.builder()
+                                .taskId(task.getId())
+                                .jobId(job.getId())
+                                .taskType(task.getTaskType())
+                                .input(inputMap)
+                                .requiredCpuCores(task.getRequiredCpu())
+                                .requiredMemoryMb(task.getRequiredMemory())
+                                .partitionId(task.getPartitionId())
+                                .totalPartitions(job.getTotalPartitions())
+                                .build();
 
-                messagingTemplate.convertAndSend("/topic/worker." + selectedWorker.getId() + ".tasks", envelope);
-                log.info("Successfully dispatched TASK_ASSIGN for task {} to worker {}", task.getId(), selectedWorker.getId());
+                MessageEnvelope<TaskAssignmentMessage> envelope =
+                        MessageEnvelope.<TaskAssignmentMessage>builder()
+                                .type(MessageType.TASK_ASSIGN)
+                                .workerId(selectedWorker.getId())
+                                .timestamp(Instant.now())
+                                .payload(msgPayload)
+                                .build();
+
+                messagingTemplate.convertAndSend(
+                        "/topic/worker." + selectedWorker.getId() + ".tasks", envelope);
+                log.info(
+                        "Successfully dispatched TASK_ASSIGN for task {} to worker {}",
+                        task.getId(),
+                        selectedWorker.getId());
 
                 if (job.getState() == JobState.QUEUED) {
                     job.setState(JobState.RUNNING);
@@ -122,13 +131,17 @@ public class SchedulerService {
                 }
 
             } catch (Exception e) {
-                log.error("Failed to send TASK_ASSIGN for task {} to worker {}", task.getId(), selectedWorker.getId(), e);
+                log.error(
+                        "Failed to send TASK_ASSIGN for task {} to worker {}",
+                        task.getId(),
+                        selectedWorker.getId(),
+                        e);
                 // 4. if send fails, release reservation and return Task to UNASSIGNED
                 resourceReservationService.release(selectedWorker.getId(), task.getId());
                 task.setState(TaskState.UNASSIGNED);
                 taskRepository.save(task);
             }
-            
+
         } else {
             log.debug("No eligible worker found for task {}", task.getId());
         }
@@ -156,7 +169,8 @@ public class SchedulerService {
 
     private double calculateUtilization(String workerId) {
         int totalCpu = resourceReservationService.getTotalCpu(workerId);
-        if (totalCpu == 0) return 1.0; // Assume full utilization if total is 0 to avoid division by zero
+        if (totalCpu == 0)
+            return 1.0; // Assume full utilization if total is 0 to avoid division by zero
         int reservedCpu = resourceReservationService.getReservedCpu(workerId);
         return (double) reservedCpu / totalCpu;
     }

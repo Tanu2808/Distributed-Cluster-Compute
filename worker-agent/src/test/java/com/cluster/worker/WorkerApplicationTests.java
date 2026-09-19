@@ -8,8 +8,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 @SpringBootTest(classes = WorkerApplication.class)
 class WorkerApplicationTests {
 
-    @MockBean
-    private WebSocketConnectionManager webSocketConnectionManager;
+    @MockBean private WebSocketConnectionManager webSocketConnectionManager;
 
     @Test
     void contextLoads() {

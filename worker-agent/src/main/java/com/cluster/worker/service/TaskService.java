@@ -15,10 +15,6 @@ import com.cluster.worker.task.TaskHandlerRegistry;
 import com.cluster.worker.task.TaskState;
 import com.cluster.worker.task.WorkerTask;
 import jakarta.annotation.PreDestroy;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,6 +22,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 @Service
 public class TaskService {
@@ -42,7 +41,7 @@ public class TaskService {
 
     private final ConcurrentHashMap<String, WorkerTask> allTasks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Future<?>> runningFutures = new ConcurrentHashMap<>();
-    
+
     private final BlockingQueue<WorkerTask> taskQueue;
     private final ExecutorService dispatchPool;
     private final ExecutorService taskExecutionPool;
@@ -50,13 +49,14 @@ public class TaskService {
     private final AtomicInteger dispatchThreadCounter = new AtomicInteger(0);
     private final AtomicInteger execThreadCounter = new AtomicInteger(0);
 
-    public TaskService(WorkerConfig config,
-                       WorkerStateManager stateManager,
-                       ResourceAdmissionService admissionService,
-                       SystemMetricsProvider metricsProvider,
-                       TaskHandlerRegistry handlerRegistry,
-                       WebSocketConnectionManager connectionManager,
-                       com.cluster.worker.persistence.WorkerConfigurationStore configStore) {
+    public TaskService(
+            WorkerConfig config,
+            WorkerStateManager stateManager,
+            ResourceAdmissionService admissionService,
+            SystemMetricsProvider metricsProvider,
+            TaskHandlerRegistry handlerRegistry,
+            WebSocketConnectionManager connectionManager,
+            com.cluster.worker.persistence.WorkerConfigurationStore configStore) {
         this.config = config;
         this.stateManager = stateManager;
         this.admissionService = admissionService;
@@ -68,21 +68,33 @@ public class TaskService {
         int maxConcurrent = Math.max(1, config.getExecution().getMaxConcurrentTasks());
         int queueCap = Math.max(1, config.getExecution().getQueueCapacity());
         this.taskQueue = new LinkedBlockingQueue<>(queueCap);
-        
+
         // Dispatch threads to drain the taskQueue
-        this.dispatchPool = Executors.newFixedThreadPool(maxConcurrent, r -> {
-            Thread t = new Thread(r, "task-dispatch-" + dispatchThreadCounter.incrementAndGet());
-            t.setDaemon(true);
-            return t;
-        });
+        this.dispatchPool =
+                Executors.newFixedThreadPool(
+                        maxConcurrent,
+                        r -> {
+                            Thread t =
+                                    new Thread(
+                                            r,
+                                            "task-dispatch-"
+                                                    + dispatchThreadCounter.incrementAndGet());
+                            t.setDaemon(true);
+                            return t;
+                        });
 
         // Bounded execution pool to run handlers with timeout support
-        this.taskExecutionPool = Executors.newFixedThreadPool(maxConcurrent, r -> {
-            Thread t = new Thread(r, "task-exec-" + execThreadCounter.incrementAndGet());
-            t.setDaemon(true);
-            return t;
-        });
-        
+        this.taskExecutionPool =
+                Executors.newFixedThreadPool(
+                        maxConcurrent,
+                        r -> {
+                            Thread t =
+                                    new Thread(
+                                            r, "task-exec-" + execThreadCounter.incrementAndGet());
+                            t.setDaemon(true);
+                            return t;
+                        });
+
         // Start background dispatch threads
         for (int i = 0; i < maxConcurrent; i++) {
             this.dispatchPool.submit(this::processQueue);
@@ -91,16 +103,17 @@ public class TaskService {
 
     public List<WorkerTask> getActiveTasks() {
         return allTasks.values().stream()
-                .filter(t -> t.getState() == TaskState.RUNNING || t.getState() == TaskState.UNASSIGNED)
+                .filter(
+                        t ->
+                                t.getState() == TaskState.RUNNING
+                                        || t.getState() == TaskState.UNASSIGNED)
                 .toList();
     }
 
     public List<WorkerTask> getQueuedTasks() {
-        return allTasks.values().stream()
-                .filter(t -> t.getState() == TaskState.ASSIGNED)
-                .toList();
+        return allTasks.values().stream().filter(t -> t.getState() == TaskState.ASSIGNED).toList();
     }
-    
+
     public List<WorkerTask> getAllTasks() {
         return new ArrayList<>(allTasks.values());
     }
@@ -111,7 +124,9 @@ public class TaskService {
     }
 
     public void submitTask(TaskAssignmentMessage assignment) {
-        if (assignment == null || assignment.getTaskId() == null || assignment.getTaskId().trim().isEmpty()) {
+        if (assignment == null
+                || assignment.getTaskId() == null
+                || assignment.getTaskId().trim().isEmpty()) {
             log.warn("Rejected invalid task submission: missing or empty task ID");
             return;
         }
@@ -142,8 +157,10 @@ public class TaskService {
         // Validate handler exists
         Optional<TaskHandler> handlerOpt = handlerRegistry.getHandler(assignment.getTaskType());
         if (handlerOpt.isEmpty()) {
-            log.warn("Task {} rejected: unsupported task type {}", taskId, assignment.getTaskType());
-            sendStatus(taskId, TaskState.FAILED, "Unsupported task type: " + assignment.getTaskType());
+            log.warn(
+                    "Task {} rejected: unsupported task type {}", taskId, assignment.getTaskType());
+            sendStatus(
+                    taskId, TaskState.FAILED, "Unsupported task type: " + assignment.getTaskType());
             return;
         }
 
@@ -153,9 +170,10 @@ public class TaskService {
         task.setInput(assignment.getInput());
         task.setRequiredCpuCores(assignment.getRequiredCpuCores());
         task.setRequiredMemoryMb(assignment.getRequiredMemoryMb());
-        task.setTimeoutSeconds(assignment.getTimeoutSeconds() > 0 ? 
-                               assignment.getTimeoutSeconds() : 
-                               config.getExecution().getDefaultTimeoutSeconds());
+        task.setTimeoutSeconds(
+                assignment.getTimeoutSeconds() > 0
+                        ? assignment.getTimeoutSeconds()
+                        : config.getExecution().getDefaultTimeoutSeconds());
         task.setJobId(assignment.getJobId());
         task.setPartitionId(assignment.getPartitionId());
         task.setTotalPartitions(assignment.getTotalPartitions());
@@ -175,7 +193,9 @@ public class TaskService {
                 return;
             }
 
-            boolean reserved = admissionService.tryReserve(task, metricsProvider.collectMetrics(), config.getExecution());
+            boolean reserved =
+                    admissionService.tryReserve(
+                            task, metricsProvider.collectMetrics(), config.getExecution());
             if (!reserved) {
                 rejectTask(task, "Insufficient resources");
                 return;
@@ -193,16 +213,17 @@ public class TaskService {
             log.info("Task {} queued successfully", taskId);
         }
     }
-    
+
     public boolean cancelTask(String taskId) {
         if (taskId == null) return false;
         WorkerTask task = allTasks.get(taskId);
         if (task == null) return false;
-        
+
         synchronized (task) {
             TaskState current = task.getState();
             if (current.isTerminal()) {
-                log.debug("Task {} is already in terminal state {}, cancel ignored", taskId, current);
+                log.debug(
+                        "Task {} is already in terminal state {}, cancel ignored", taskId, current);
                 return false;
             }
 
@@ -253,7 +274,7 @@ public class TaskService {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 WorkerTask task = taskQueue.take();
-                
+
                 synchronized (task) {
                     if (task.getState() == TaskState.CANCELLED) {
                         continue;
@@ -261,7 +282,7 @@ public class TaskService {
                 }
 
                 executeTask(task);
-                
+
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -285,8 +306,13 @@ public class TaskService {
 
         TaskHandler handler;
         try {
-            handler = handlerRegistry.getHandler(task.getTaskType())
-                    .orElseThrow(() -> new IllegalStateException("No handler found for " + task.getTaskType()));
+            handler =
+                    handlerRegistry
+                            .getHandler(task.getTaskType())
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "No handler found for " + task.getTaskType()));
         } catch (Exception e) {
             synchronized (task) {
                 if (task.getState() != TaskState.CANCELLED) {
@@ -316,7 +342,9 @@ public class TaskService {
                     sendResult(task);
                     log.info("Task {} completed successfully", task.getTaskId());
                 } else {
-                    log.info("Task {} completed after being cancelled; result discarded", task.getTaskId());
+                    log.info(
+                            "Task {} completed after being cancelled; result discarded",
+                            task.getTaskId());
                 }
             }
         } catch (TimeoutException e) {
@@ -324,12 +352,16 @@ public class TaskService {
             synchronized (task) {
                 if (task.getState() != TaskState.CANCELLED) {
                     task.setState(TaskState.FAILED);
-                    task.setErrorMessage("Task timed out after " + task.getTimeoutSeconds() + " seconds");
+                    task.setErrorMessage(
+                            "Task timed out after " + task.getTimeoutSeconds() + " seconds");
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
                     sendStatus(task, TaskState.FAILED, task.getErrorMessage());
                     sendResult(task);
-                    log.warn("Task {} timed out after {} seconds", task.getTaskId(), task.getTimeoutSeconds());
+                    log.warn(
+                            "Task {} timed out after {} seconds",
+                            task.getTaskId(),
+                            task.getTimeoutSeconds());
                 }
             }
         } catch (CancellationException e) {
@@ -352,13 +384,19 @@ public class TaskService {
                         task.setErrorMessage("Task execution interrupted");
                     } else {
                         task.setState(TaskState.FAILED);
-                        task.setErrorMessage(cause.getMessage() != null ? cause.getMessage() : "Unknown execution error");
+                        task.setErrorMessage(
+                                cause.getMessage() != null
+                                        ? cause.getMessage()
+                                        : "Unknown execution error");
                     }
                     task.setCompletedAt(Instant.now());
                     admissionService.release(task);
                     sendStatus(task, task.getState(), task.getErrorMessage());
                     sendResult(task);
-                    log.warn("Task {} failed during execution: {}", task.getTaskId(), task.getErrorMessage());
+                    log.warn(
+                            "Task {} failed during execution: {}",
+                            task.getTaskId(),
+                            task.getErrorMessage());
                 }
             }
         } catch (InterruptedException e) {
@@ -402,56 +440,69 @@ public class TaskService {
     }
 
     private void sendStatus(WorkerTask task, TaskState state, String message) {
-        TaskStatusMessage statusMsg = TaskStatusMessage.builder()
-                .taskId(task.getTaskId())
-                .state(state.name())
-                .message(message)
-                .jobId(task.getJobId())
-                .partitionId(task.getPartitionId())
-                .build();
-        MessageEnvelope<TaskStatusMessage> env = MessageEnvelope.<TaskStatusMessage>builder()
-                .type(MessageType.TASK_STATUS)
-                .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
-                .timestamp(Instant.now())
-                .payload(statusMsg)
-                .build();
+        TaskStatusMessage statusMsg =
+                TaskStatusMessage.builder()
+                        .taskId(task.getTaskId())
+                        .state(state.name())
+                        .message(message)
+                        .jobId(task.getJobId())
+                        .partitionId(task.getPartitionId())
+                        .build();
+        MessageEnvelope<TaskStatusMessage> env =
+                MessageEnvelope.<TaskStatusMessage>builder()
+                        .type(MessageType.TASK_STATUS)
+                        .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
+                        .timestamp(Instant.now())
+                        .payload(statusMsg)
+                        .build();
         connectionManager.sendMessage("/app/worker.task.status", env);
     }
 
     private void sendStatus(String taskId, TaskState state, String message) {
         TaskStatusMessage statusMsg = new TaskStatusMessage(taskId, state.name(), message);
-        MessageEnvelope<TaskStatusMessage> env = MessageEnvelope.<TaskStatusMessage>builder()
-                .type(MessageType.TASK_STATUS)
-                .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
-                .timestamp(Instant.now())
-                .payload(statusMsg)
-                .build();
+        MessageEnvelope<TaskStatusMessage> env =
+                MessageEnvelope.<TaskStatusMessage>builder()
+                        .type(MessageType.TASK_STATUS)
+                        .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
+                        .timestamp(Instant.now())
+                        .payload(statusMsg)
+                        .build();
         connectionManager.sendMessage("/app/worker.task.status", env);
     }
 
     private void sendResult(WorkerTask task) {
         long duration = 0L;
         if (task.getStartedAt() != null && task.getCompletedAt() != null) {
-            duration = Math.max(0L, Duration.between(task.getStartedAt(), task.getCompletedAt()).toMillis());
+            duration =
+                    Math.max(
+                            0L,
+                            Duration.between(task.getStartedAt(), task.getCompletedAt())
+                                    .toMillis());
         } else if (task.getReceivedAt() != null && task.getCompletedAt() != null) {
-            duration = Math.max(0L, Duration.between(task.getReceivedAt(), task.getCompletedAt()).toMillis());
+            duration =
+                    Math.max(
+                            0L,
+                            Duration.between(task.getReceivedAt(), task.getCompletedAt())
+                                    .toMillis());
         }
 
-        TaskResultMessage resultMsg = TaskResultMessage.builder()
-                .taskId(task.getTaskId())
-                .status(task.getState().name())
-                .result(task.getResult())
-                .executionDurationMs(duration)
-                .error(task.getErrorMessage())
-                .jobId(task.getJobId())
-                .partitionId(task.getPartitionId())
-                .build();
-        MessageEnvelope<TaskResultMessage> env = MessageEnvelope.<TaskResultMessage>builder()
-                .type(MessageType.TASK_RESULT)
-                .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
-                .timestamp(Instant.now())
-                .payload(resultMsg)
-                .build();
+        TaskResultMessage resultMsg =
+                TaskResultMessage.builder()
+                        .taskId(task.getTaskId())
+                        .status(task.getState().name())
+                        .result(task.getResult())
+                        .executionDurationMs(duration)
+                        .error(task.getErrorMessage())
+                        .jobId(task.getJobId())
+                        .partitionId(task.getPartitionId())
+                        .build();
+        MessageEnvelope<TaskResultMessage> env =
+                MessageEnvelope.<TaskResultMessage>builder()
+                        .type(MessageType.TASK_RESULT)
+                        .workerId(configStore != null ? configStore.getWorkerId() : "unknown")
+                        .timestamp(Instant.now())
+                        .payload(resultMsg)
+                        .build();
         connectionManager.sendMessage("/app/worker.task.result", env);
     }
 

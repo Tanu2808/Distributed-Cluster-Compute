@@ -1,15 +1,14 @@
 package com.cluster.worker.task;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class SumRangeTaskHandlerTest {
 
@@ -84,10 +83,10 @@ class SumRangeTaskHandlerTest {
     void testSumRangeBigIntegerAndBigDecimalInputs() throws Exception {
         WorkerTask task = new WorkerTask();
         task.setTaskId("big-num-task");
-        task.setInput(Map.of(
-                "start", new BigInteger("1"),
-                "end", new BigDecimal("100")
-        ));
+        task.setInput(
+                Map.of(
+                        "start", new BigInteger("1"),
+                        "end", new BigDecimal("100")));
 
         Object result = handler.execute(task);
         assertEquals(5050L, result);
@@ -106,7 +105,8 @@ class SumRangeTaskHandlerTest {
         // 1,000,000 to 1,001,000
         WorkerTask task = createTask(1_000_000L, 1_001_000L);
         Object result = handler.execute(task);
-        // Formula: (1001000 - 1000000 + 1) * (1000000 + 1001000) / 2 = 1001 * 2001000 / 2 = 1,001,500,500
+        // Formula: (1001000 - 1000000 + 1) * (1000000 + 1001000) / 2 = 1001 * 2001000 / 2 =
+        // 1,001,500,500
         assertEquals(1001500500L, result);
     }
 
@@ -116,7 +116,8 @@ class SumRangeTaskHandlerTest {
         task.setTaskId("t-missing-start");
         task.setInput(Map.of("end", 100));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("Missing required parameter: start"));
     }
 
@@ -126,7 +127,8 @@ class SumRangeTaskHandlerTest {
         task.setTaskId("t-missing-end");
         task.setInput(Map.of("start", 1));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("Missing required parameter: end"));
     }
 
@@ -139,7 +141,8 @@ class SumRangeTaskHandlerTest {
         input.put("end", 100);
         task.setInput(input);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("Missing required parameter: start"));
     }
 
@@ -152,7 +155,8 @@ class SumRangeTaskHandlerTest {
         input.put("end", null);
         task.setInput(input);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("Missing required parameter: end"));
     }
 
@@ -162,14 +166,16 @@ class SumRangeTaskHandlerTest {
         task.setTaskId("t-null-input");
         task.setInput(null);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("SUM_RANGE task requires input parameters"));
     }
 
     @Test
     void testStartGreaterThanEndThrowsException() {
         WorkerTask task = createTask(100, 10);
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("must be less than or equal to end"));
     }
 
@@ -191,7 +197,8 @@ class SumRangeTaskHandlerTest {
         WorkerTask task = new WorkerTask();
         task.setTaskId("t-float");
         task.setInput(Map.of("start", 1.5, "end", 10));
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("must be an integer"));
     }
 
@@ -201,7 +208,8 @@ class SumRangeTaskHandlerTest {
         task.setTaskId("t-exceed-span");
         // Safe limit is 100,000,000 span
         task.setInput(Map.of("start", 1L, "end", 100_000_005L));
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
+        IllegalArgumentException ex =
+                assertThrows(IllegalArgumentException.class, () -> handler.execute(task));
         assertTrue(ex.getMessage().contains("exceeds maximum supported limit"));
     }
 
@@ -242,14 +250,16 @@ class SumRangeTaskHandlerTest {
         WorkerTask task = createTask(1, 10_000_000);
         AtomicBoolean cancelledDuringRun = new AtomicBoolean(false);
 
-        Thread workerThread = new Thread(() -> {
-            try {
-                handler.execute(task);
-            } catch (InterruptedException e) {
-                cancelledDuringRun.set(true);
-            } catch (Exception ignored) {
-            }
-        });
+        Thread workerThread =
+                new Thread(
+                        () -> {
+                            try {
+                                handler.execute(task);
+                            } catch (InterruptedException e) {
+                                cancelledDuringRun.set(true);
+                            } catch (Exception ignored) {
+                            }
+                        });
 
         workerThread.start();
         // Allow thread to start running summation loop
@@ -258,7 +268,9 @@ class SumRangeTaskHandlerTest {
         workerThread.interrupt();
         workerThread.join(2000);
 
-        assertTrue(cancelledDuringRun.get(), "Handler should cooperatively catch cancellation/interrupt during loop");
+        assertTrue(
+                cancelledDuringRun.get(),
+                "Handler should cooperatively catch cancellation/interrupt during loop");
     }
 
     private WorkerTask createTask(long start, long end) {

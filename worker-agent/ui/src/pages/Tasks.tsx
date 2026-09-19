@@ -1,73 +1,95 @@
-import { useState, useEffect, useMemo } from 'react';
-import { RefreshCw, Search, X, Copy, Check, Ban, Eye, ChevronDown, ChevronRight } from 'lucide-react';
-import { useTasks } from '../hooks/useTasks';
-import { taskApi } from '../services/taskApi';
-import type { WorkerTask } from '../types';
+import { useState, useEffect, useMemo } from "react";
+import {
+  RefreshCw,
+  Search,
+  X,
+  Copy,
+  Check,
+  Ban,
+  Eye,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import { useTasks } from "../hooks/useTasks";
+import { taskApi } from "../services/taskApi";
+import type { WorkerTask } from "../types";
 import {
   MetricCard,
   StatusBadge,
   AlertBanner,
   ConfirmModal,
   Skeleton,
-} from '../components';
+} from "../components";
 
-type FilterTab = 'ALL' | 'ACTIVE' | 'COMPLETED' | 'FAILED';
+type FilterTab = "ALL" | "ACTIVE" | "COMPLETED" | "FAILED";
 
-function formatDuration(startedAt?: string, completedAt?: string | null): string {
-  if (!startedAt) return '—';
+function formatDuration(
+  startedAt?: string,
+  completedAt?: string | null,
+): string {
+  if (!startedAt) return "—";
   const start = new Date(startedAt).getTime();
-  if (isNaN(start)) return '—';
+  if (isNaN(start)) return "—";
 
   const end = completedAt ? new Date(completedAt).getTime() : Date.now();
-  if (isNaN(end) || end < start) return '—';
+  if (isNaN(end) || end < start) return "—";
 
   const diffMs = end - start;
   const totalSec = Math.floor(diffMs / 1000);
   const hrs = Math.floor(totalSec / 3600);
   const mins = Math.floor((totalSec % 3600) / 60);
   const secs = totalSec % 60;
-  const pad = (n: number) => n.toString().padStart(2, '0');
+  const pad = (n: number) => n.toString().padStart(2, "0");
 
   return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
 }
 
-
 function formatTime(isoString?: string | null): string {
-  if (!isoString) return '—';
+  if (!isoString) return "—";
   try {
     const d = new Date(isoString);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   } catch {
-    return '—';
+    return "—";
   }
 }
 
 function formatMb(mb?: number): string {
-  if (mb === undefined || mb === null || isNaN(mb) || mb < 0) return '—';
+  if (mb === undefined || mb === null || isNaN(mb) || mb < 0) return "—";
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
   return `${mb} MB`;
 }
 
 function isCancellable(state: string): boolean {
-  return ['QUEUED', 'RUNNING', 'VALIDATING', 'RECEIVED'].includes(state);
+  return ["QUEUED", "RUNNING", "VALIDATING", "RECEIVED"].includes(state);
 }
 
 export default function Tasks() {
   const { tasks, loading, refreshing, error, refetch } = useTasks(4000);
 
-  const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<FilterTab>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskToCancel, setTaskToCancel] = useState<WorkerTask | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [inputExpanded, setInputExpanded] = useState(false);
   const [resultExpanded, setResultExpanded] = useState(false);
 
   // Live timer tick for running tasks
-  const hasRunning = useMemo(() => tasks.some((t) => t.state === 'RUNNING'), [tasks]);
+  const hasRunning = useMemo(
+    () => tasks.some((t) => t.state === "RUNNING"),
+    [tasks],
+  );
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -82,7 +104,6 @@ export default function Tasks() {
     return tasks.find((t) => t.taskId === selectedTaskId) || null;
   }, [tasks, selectedTaskId]);
 
-
   // Metric Summary Counts
   const counts = useMemo(() => {
     let running = 0;
@@ -91,10 +112,10 @@ export default function Tasks() {
     let failed = 0;
 
     for (const t of tasks) {
-      if (t.state === 'RUNNING') running++;
-      else if (t.state === 'QUEUED') queued++;
-      else if (t.state === 'COMPLETED') completed++;
-      else if (['FAILED', 'CANCELLED', 'REJECTED'].includes(t.state)) failed++;
+      if (t.state === "RUNNING") running++;
+      else if (t.state === "QUEUED") queued++;
+      else if (t.state === "COMPLETED") completed++;
+      else if (["FAILED", "CANCELLED", "REJECTED"].includes(t.state)) failed++;
     }
 
     return {
@@ -111,12 +132,16 @@ export default function Tasks() {
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       // Tab filter
-      if (activeTab === 'ACTIVE') {
-        if (!['RUNNING', 'QUEUED', 'VALIDATING', 'RECEIVED'].includes(task.state)) return false;
-      } else if (activeTab === 'COMPLETED') {
-        if (task.state !== 'COMPLETED') return false;
-      } else if (activeTab === 'FAILED') {
-        if (!['FAILED', 'CANCELLED', 'REJECTED'].includes(task.state)) return false;
+      if (activeTab === "ACTIVE") {
+        if (
+          !["RUNNING", "QUEUED", "VALIDATING", "RECEIVED"].includes(task.state)
+        )
+          return false;
+      } else if (activeTab === "COMPLETED") {
+        if (task.state !== "COMPLETED") return false;
+      } else if (activeTab === "FAILED") {
+        if (!["FAILED", "CANCELLED", "REJECTED"].includes(task.state))
+          return false;
       }
 
       // Search filter
@@ -143,14 +168,17 @@ export default function Tasks() {
     try {
       await taskApi.cancelTask(taskToCancel.taskId);
       setNotification({
-        type: 'success',
+        type: "success",
         message: `Task ${taskToCancel.taskId} cancelled successfully.`,
       });
       await refetch();
     } catch (err) {
       setNotification({
-        type: 'error',
-        message: err instanceof Error ? err.message : `Failed to cancel task ${taskToCancel.taskId}`,
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : `Failed to cancel task ${taskToCancel.taskId}`,
       });
     } finally {
       setCancelLoading(false);
@@ -178,7 +206,9 @@ export default function Tasks() {
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-console-text hover:bg-slate-50 bg-white border border-console-border hover:border-slate-400 rounded-sm transition-colors disabled:opacity-50"
           title="Refresh tasks"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? "animate-spin" : ""}`}
+          />
           <span>Refresh</span>
         </button>
       </div>
@@ -212,10 +242,22 @@ export default function Tasks() {
       {/* 2. Summary Metric Row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         <MetricCard label="TOTAL" value={counts.total} />
-        <MetricCard label="RUNNING" value={counts.running} status={counts.running > 0 ? 'normal' : undefined} />
-        <MetricCard label="QUEUED" value={counts.queued} status={counts.queued > 0 ? 'warning' : undefined} />
+        <MetricCard
+          label="RUNNING"
+          value={counts.running}
+          status={counts.running > 0 ? "normal" : undefined}
+        />
+        <MetricCard
+          label="QUEUED"
+          value={counts.queued}
+          status={counts.queued > 0 ? "warning" : undefined}
+        />
         <MetricCard label="COMPLETED" value={counts.completed} />
-        <MetricCard label="FAILED" value={counts.failed} status={counts.failed > 0 ? 'critical' : undefined} />
+        <MetricCard
+          label="FAILED"
+          value={counts.failed}
+          status={counts.failed > 0 ? "critical" : undefined}
+        />
       </div>
 
       {/* 3. Filter Bar & Search */}
@@ -224,10 +266,10 @@ export default function Tasks() {
         <div className="flex items-center gap-1 overflow-x-auto">
           {(
             [
-              { id: 'ALL', label: 'All', count: counts.total },
-              { id: 'ACTIVE', label: 'Active', count: counts.active },
-              { id: 'COMPLETED', label: 'Completed', count: counts.completed },
-              { id: 'FAILED', label: 'Failed', count: counts.failed },
+              { id: "ALL", label: "All", count: counts.total },
+              { id: "ACTIVE", label: "Active", count: counts.active },
+              { id: "COMPLETED", label: "Completed", count: counts.completed },
+              { id: "FAILED", label: "Failed", count: counts.failed },
             ] as const
           ).map((tab) => (
             <button
@@ -236,12 +278,14 @@ export default function Tasks() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors shrink-0 flex items-center gap-1.5 ${
                 activeTab === tab.id
-                  ? 'bg-white text-console-accent border border-slate-300 shadow-sm font-semibold'
-                  : 'text-console-textMuted hover:text-console-text hover:bg-slate-200/50 border border-transparent'
+                  ? "bg-white text-console-accent border border-slate-300 shadow-sm font-semibold"
+                  : "text-console-textMuted hover:text-console-text hover:bg-slate-200/50 border border-transparent"
               }`}
             >
               <span>{tab.label}</span>
-              <span className="text-[10px] font-mono opacity-70">({tab.count})</span>
+              <span className="text-[10px] font-mono opacity-70">
+                ({tab.count})
+              </span>
             </button>
           ))}
         </div>
@@ -259,7 +303,7 @@ export default function Tasks() {
           {searchQuery && (
             <button
               type="button"
-              onClick={() => setSearchQuery('')}
+              onClick={() => setSearchQuery("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-console-textDim hover:text-console-text"
             >
               <X className="w-3.5 h-3.5" />
@@ -289,14 +333,30 @@ export default function Tasks() {
                 // Table Loading Skeletons
                 Array.from({ length: 4 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-24" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-20" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-16" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-14" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-16" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-16" /></td>
-                    <td className="py-3 px-3"><Skeleton className="h-4 w-16" /></td>
-                    <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-14" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-3 px-3">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <Skeleton className="h-4 w-12 ml-auto" />
+                    </td>
                   </tr>
                 ))
               ) : filteredTasks.length === 0 ? (
@@ -305,14 +365,18 @@ export default function Tasks() {
                   <td colSpan={8} className="py-12 text-center">
                     {tasks.length === 0 ? (
                       <div className="space-y-1">
-                        <div className="text-sm font-semibold text-console-text">No tasks</div>
+                        <div className="text-sm font-semibold text-console-text">
+                          No tasks
+                        </div>
                         <div className="text-xs text-console-textDim">
                           Tasks executed by this worker will appear here.
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-1">
-                        <div className="text-sm font-semibold text-console-text">No matching tasks</div>
+                        <div className="text-sm font-semibold text-console-text">
+                          No matching tasks
+                        </div>
                         <div className="text-xs text-console-textDim">
                           Adjust filter or search criteria.
                         </div>
@@ -322,7 +386,7 @@ export default function Tasks() {
                 </tr>
               ) : (
                 filteredTasks.map((task) => {
-                  const isRunning = task.state === 'RUNNING';
+                  const isRunning = task.state === "RUNNING";
                   const durationStr = isRunning
                     ? formatDuration(task.startedAt, null)
                     : formatDuration(task.startedAt, task.completedAt);
@@ -333,7 +397,7 @@ export default function Tasks() {
                       key={task.taskId}
                       onClick={() => setSelectedTaskId(task.taskId)}
                       className={`hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                        selectedTaskId === task.taskId ? 'bg-blue-50/60' : ''
+                        selectedTaskId === task.taskId ? "bg-blue-50/60" : ""
                       }`}
                     >
                       {/* Task ID */}
@@ -343,7 +407,7 @@ export default function Tasks() {
 
                       {/* Type */}
                       <td className="py-2.5 px-3 font-mono text-console-textMuted">
-                        {task.taskType || 'UNKNOWN'}
+                        {task.taskType || "UNKNOWN"}
                       </td>
 
                       {/* Status */}
@@ -353,7 +417,9 @@ export default function Tasks() {
 
                       {/* CPU */}
                       <td className="py-2.5 px-3 font-mono text-console-textDim">
-                        {task.requiredCpuCores ? `${task.requiredCpuCores} core${task.requiredCpuCores > 1 ? 's' : ''}` : '—'}
+                        {task.requiredCpuCores
+                          ? `${task.requiredCpuCores} core${task.requiredCpuCores > 1 ? "s" : ""}`
+                          : "—"}
                       </td>
 
                       {/* Memory */}
@@ -372,7 +438,10 @@ export default function Tasks() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-2.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="py-2.5 px-3 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="inline-flex items-center gap-1.5 justify-end">
                           <button
                             type="button"
@@ -458,7 +527,9 @@ export default function Tasks() {
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Type</span>
-                    <span className="font-mono text-console-text">{selectedTask.taskType}</span>
+                    <span className="font-mono text-console-text">
+                      {selectedTask.taskType}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Status</span>
@@ -475,22 +546,31 @@ export default function Tasks() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Received</span>
-                    <span className="font-mono text-console-text">{formatTime(selectedTask.receivedAt)}</span>
+                    <span className="font-mono text-console-text">
+                      {formatTime(selectedTask.receivedAt)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Started</span>
-                    <span className="font-mono text-console-text">{formatTime(selectedTask.startedAt)}</span>
+                    <span className="font-mono text-console-text">
+                      {formatTime(selectedTask.startedAt)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Completed</span>
-                    <span className="font-mono text-console-text">{formatTime(selectedTask.completedAt)}</span>
+                    <span className="font-mono text-console-text">
+                      {formatTime(selectedTask.completedAt)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Duration</span>
                     <span className="font-mono text-console-text">
-                      {selectedTask.state === 'RUNNING'
+                      {selectedTask.state === "RUNNING"
                         ? formatDuration(selectedTask.startedAt, null)
-                        : formatDuration(selectedTask.startedAt, selectedTask.completedAt)}
+                        : formatDuration(
+                            selectedTask.startedAt,
+                            selectedTask.completedAt,
+                          )}
                     </span>
                   </div>
                 </div>
@@ -505,17 +585,23 @@ export default function Tasks() {
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">CPU Cores</span>
                     <span className="font-mono text-console-text">
-                      {selectedTask.requiredCpuCores ? `${selectedTask.requiredCpuCores} cores` : '—'}
+                      {selectedTask.requiredCpuCores
+                        ? `${selectedTask.requiredCpuCores} cores`
+                        : "—"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Memory</span>
-                    <span className="font-mono text-console-text">{formatMb(selectedTask.requiredMemoryMb)}</span>
+                    <span className="font-mono text-console-text">
+                      {formatMb(selectedTask.requiredMemoryMb)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-1">
                     <span className="text-console-textDim">Timeout</span>
                     <span className="font-mono text-console-text">
-                      {selectedTask.timeoutSeconds ? `${selectedTask.timeoutSeconds}s` : '—'}
+                      {selectedTask.timeoutSeconds
+                        ? `${selectedTask.timeoutSeconds}s`
+                        : "—"}
                     </span>
                   </div>
                 </div>
@@ -534,58 +620,60 @@ export default function Tasks() {
               )}
 
               {/* Technical Input Section */}
-              {selectedTask.input && Object.keys(selectedTask.input).length > 0 && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setInputExpanded(!inputExpanded)}
-                    className="flex items-center justify-between w-full py-1 text-left group"
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-console-textDim font-mono group-hover:text-console-text">
-                      Input Payload
-                    </span>
-                    {inputExpanded ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-console-textDim" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-console-textDim" />
-                    )}
-                  </button>
+              {selectedTask.input &&
+                Object.keys(selectedTask.input).length > 0 && (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setInputExpanded(!inputExpanded)}
+                      className="flex items-center justify-between w-full py-1 text-left group"
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-console-textDim font-mono group-hover:text-console-text">
+                        Input Payload
+                      </span>
+                      {inputExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-console-textDim" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-console-textDim" />
+                      )}
+                    </button>
 
-                  {inputExpanded && (
-                    <pre className="p-2.5 bg-console-subtle border border-console-border rounded-sm font-mono text-[11px] text-console-text overflow-x-auto max-h-48">
-                      {JSON.stringify(selectedTask.input, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              )}
+                    {inputExpanded && (
+                      <pre className="p-2.5 bg-console-subtle border border-console-border rounded-sm font-mono text-[11px] text-console-text overflow-x-auto max-h-48">
+                        {JSON.stringify(selectedTask.input, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                )}
 
               {/* Result Section */}
-              {selectedTask.result !== undefined && selectedTask.result !== null && (
-                <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setResultExpanded(!resultExpanded)}
-                    className="flex items-center justify-between w-full py-1 text-left group"
-                  >
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-console-textDim font-mono group-hover:text-console-text">
-                      Execution Result
-                    </span>
-                    {resultExpanded ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-console-textDim" />
-                    ) : (
-                      <ChevronRight className="w-3.5 h-3.5 text-console-textDim" />
-                    )}
-                  </button>
+              {selectedTask.result !== undefined &&
+                selectedTask.result !== null && (
+                  <div className="space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setResultExpanded(!resultExpanded)}
+                      className="flex items-center justify-between w-full py-1 text-left group"
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-console-textDim font-mono group-hover:text-console-text">
+                        Execution Result
+                      </span>
+                      {resultExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-console-textDim" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-console-textDim" />
+                      )}
+                    </button>
 
-                  {resultExpanded && (
-                    <pre className="p-2.5 bg-console-subtle border border-console-border rounded-sm font-mono text-[11px] text-emerald-800 overflow-x-auto max-h-48">
-                      {typeof selectedTask.result === 'object'
-                        ? JSON.stringify(selectedTask.result, null, 2)
-                        : String(selectedTask.result)}
-                    </pre>
-                  )}
-                </div>
-              )}
+                    {resultExpanded && (
+                      <pre className="p-2.5 bg-console-subtle border border-console-border rounded-sm font-mono text-[11px] text-emerald-800 overflow-x-auto max-h-48">
+                        {typeof selectedTask.result === "object"
+                          ? JSON.stringify(selectedTask.result, null, 2)
+                          : String(selectedTask.result)}
+                      </pre>
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* Drawer Footer Actions */}
@@ -620,7 +708,7 @@ export default function Tasks() {
         isOpen={Boolean(taskToCancel)}
         title="Cancel Task"
         message={`Are you sure you want to cancel task "${taskToCancel?.taskId}"? The execution will be terminated.`}
-        confirmLabel={cancelLoading ? 'Cancelling...' : 'Cancel Task'}
+        confirmLabel={cancelLoading ? "Cancelling..." : "Cancel Task"}
         variant="danger"
         onConfirm={handleConfirmCancel}
         onCancel={() => setTaskToCancel(null)}

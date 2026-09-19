@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
-import { config } from '../utils/config';
-import { queryKeys } from '../types/api';
-import { fetchClusterSummary } from '../api/clusterApi';
-import { mockClusterSummary } from '../mock/cluster';
-import { useWorkers } from './useWorkers';
-import type { ClusterSummary } from '../types';
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { config } from "../utils/config";
+import { queryKeys } from "../types/api";
+import { fetchClusterSummary } from "../api/clusterApi";
+import { mockClusterSummary } from "../mock/cluster";
+import { useWorkers } from "./useWorkers";
+import type { ClusterSummary } from "../types";
 
 /**
  * Returns the aggregated cluster summary.
@@ -16,7 +16,13 @@ import type { ClusterSummary } from '../types';
  * Both modes return the same { data, isLoading, isError, error, refetch } shape.
  */
 export function useClusterSummary() {
-  const { data: clusterStatusData, isLoading: statusLoading, isError: statusError, error: statusErr, refetch: refetchStatus } = useQuery<ClusterSummary, Error>({
+  const {
+    data: clusterStatusData,
+    isLoading: statusLoading,
+    isError: statusError,
+    error: statusErr,
+    refetch: refetchStatus,
+  } = useQuery<ClusterSummary, Error>({
     queryKey: queryKeys.cluster,
     queryFn: config.USE_MOCK_API
       ? () => Promise.resolve(mockClusterSummary)
@@ -24,7 +30,13 @@ export function useClusterSummary() {
     staleTime: config.USE_MOCK_API ? Infinity : undefined,
   });
 
-  const { data: workers = [], isLoading: workersLoading, isError: workersError, error: workersErr, refetch: refetchWorkers } = useWorkers();
+  const {
+    data: workers = [],
+    isLoading: workersLoading,
+    isError: workersError,
+    error: workersErr,
+    refetch: refetchWorkers,
+  } = useWorkers();
 
   const cluster = useMemo(() => {
     if (config.USE_MOCK_API) {
@@ -45,11 +57,12 @@ export function useClusterSummary() {
     let offlineWorkers = 0;
 
     for (const w of workers) {
-      const isOnline = w.state === 'ONLINE' || w.state === 'BUSY';
-      
-      if (w.state === 'BUSY') activeWorkers++;
+      const isOnline = w.state === "ONLINE" || w.state === "BUSY";
+
+      if (w.state === "BUSY") activeWorkers++;
       if (isOnline) connectedWorkers++;
-      if (w.state === 'OFFLINE' || w.state === 'HEARTBEAT_TIMEOUT') offlineWorkers++;
+      if (w.state === "OFFLINE" || w.state === "HEARTBEAT_TIMEOUT")
+        offlineWorkers++;
 
       if (isOnline) {
         totalCpuCores += w.cpuCores || 0;
@@ -58,8 +71,9 @@ export function useClusterSummary() {
         totalStorageTb += (w.storageMb || 0) / (1024 * 1024);
 
         usedCpuCores += ((w.cpuCores || 0) * (w.cpuUsagePercent || 0)) / 100;
-        usedMemoryGb += (((w.memoryRamMb || 0) / 1024) * (w.memoryUsagePercent || 0)) / 100;
-        
+        usedMemoryGb +=
+          (((w.memoryRamMb || 0) / 1024) * (w.memoryUsagePercent || 0)) / 100;
+
         // Approximation for used storage (since we don't track used storage per worker yet)
         usedStorageTb += totalStorageTb * 0.5; // Mocking 50% usage for demo purposes since contract is missing
       }
@@ -80,13 +94,16 @@ export function useClusterSummary() {
       usedStorageTb,
       // Provide fallback defaults for other missing values to prevent UI crashes
       availableCpuCores: Math.round(totalCpuCores - usedCpuCores),
-      cpuUsagePercent: totalCpuCores > 0 ? (usedCpuCores / totalCpuCores) * 100 : 0,
+      cpuUsagePercent:
+        totalCpuCores > 0 ? (usedCpuCores / totalCpuCores) * 100 : 0,
       availableMemoryGb: Math.round(totalMemoryGb - usedMemoryGb),
-      memoryUsagePercent: totalMemoryGb > 0 ? (usedMemoryGb / totalMemoryGb) * 100 : 0,
+      memoryUsagePercent:
+        totalMemoryGb > 0 ? (usedMemoryGb / totalMemoryGb) * 100 : 0,
       usedGpus: 0,
       availableGpus: totalGpus,
       availableStorageTb: totalStorageTb - usedStorageTb,
-      storageUsagePercent: totalStorageTb > 0 ? (usedStorageTb / totalStorageTb) * 100 : 0,
+      storageUsagePercent:
+        totalStorageTb > 0 ? (usedStorageTb / totalStorageTb) * 100 : 0,
       networkInboundMbps: 0,
       networkOutboundMbps: 0,
     } as ClusterSummary;
