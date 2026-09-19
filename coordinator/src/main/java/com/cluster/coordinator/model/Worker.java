@@ -7,8 +7,7 @@ import java.time.LocalDateTime;
 @Table(name = "workers")
 public class Worker {
 
-    @Id
-    private String id;
+    @Id private String id;
 
     private String name;
 
@@ -30,7 +29,7 @@ public class Worker {
     private LocalDateTime lastHeartbeat;
 
     private LocalDateTime createdAt;
-    
+
     private LocalDateTime updatedAt;
 
     public Worker() {}
@@ -52,28 +51,99 @@ public class Worker {
         updatedAt = LocalDateTime.now();
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getHostname() { return hostname; }
-    public void setHostname(String hostname) { this.hostname = hostname; }
-    public String getIpAddress() { return ipAddress; }
-    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-    public String getOperatingSystem() { return operatingSystem; }
-    public void setOperatingSystem(String operatingSystem) { this.operatingSystem = operatingSystem; }
-    public String getArchitecture() { return architecture; }
-    public void setArchitecture(String architecture) { this.architecture = architecture; }
-    public String getAgentVersion() { return agentVersion; }
-    public void setAgentVersion(String agentVersion) { this.agentVersion = agentVersion; }
-    public String getRuntimeCredentialHash() { return runtimeCredentialHash; }
-    public void setRuntimeCredentialHash(String runtimeCredentialHash) { this.runtimeCredentialHash = runtimeCredentialHash; }
-    public WorkerState getState() { return state; }
-    public void setState(WorkerState state) { this.state = state; }
-    public LocalDateTime getLastHeartbeat() { return lastHeartbeat; }
-    public void setLastHeartbeat(LocalDateTime lastHeartbeat) { this.lastHeartbeat = lastHeartbeat; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getHostname() {
+        return hostname;
+    }
+
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
+    }
+
+    public void setIpAddress(String ipAddress) {
+        this.ipAddress = ipAddress;
+    }
+
+    public String getOperatingSystem() {
+        return operatingSystem;
+    }
+
+    public void setOperatingSystem(String operatingSystem) {
+        this.operatingSystem = operatingSystem;
+    }
+
+    public String getArchitecture() {
+        return architecture;
+    }
+
+    public void setArchitecture(String architecture) {
+        this.architecture = architecture;
+    }
+
+    public String getAgentVersion() {
+        return agentVersion;
+    }
+
+    public void setAgentVersion(String agentVersion) {
+        this.agentVersion = agentVersion;
+    }
+
+    public String getRuntimeCredentialHash() {
+        return runtimeCredentialHash;
+    }
+
+    public void setRuntimeCredentialHash(String runtimeCredentialHash) {
+        this.runtimeCredentialHash = runtimeCredentialHash;
+    }
+
+    public WorkerState getState() {
+        return state;
+    }
+
+    public void setState(WorkerState state) {
+        this.state = state;
+    }
+
+    public LocalDateTime getLastHeartbeat() {
+        return lastHeartbeat;
+    }
+
+    public void setLastHeartbeat(LocalDateTime lastHeartbeat) {
+        this.lastHeartbeat = lastHeartbeat;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
 }

@@ -1,12 +1,12 @@
 package com.cluster.worker.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.cluster.worker.model.ConnectionState;
 import com.cluster.worker.model.ExecutionState;
 import com.cluster.worker.model.WorkerLifecycleState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class WorkerStateManagerTest {
 
@@ -20,7 +20,7 @@ class WorkerStateManagerTest {
     @Test
     void testValidLifecycleTransitions() {
         assertEquals(WorkerLifecycleState.STARTING, stateManager.getLifecycleState());
-        
+
         stateManager.transitionLifecycle(WorkerLifecycleState.INITIALIZING);
         assertEquals(WorkerLifecycleState.INITIALIZING, stateManager.getLifecycleState());
 
@@ -36,15 +36,17 @@ class WorkerStateManagerTest {
 
     @Test
     void testInvalidLifecycleTransitionThrowsException() {
-        assertThrows(IllegalStateException.class, () -> {
-            stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
+                });
     }
 
     @Test
     void testValidConnectionTransitions() {
         assertEquals(ConnectionState.DISCONNECTED, stateManager.getConnectionState());
-        
+
         stateManager.transitionConnection(ConnectionState.CONNECTING);
         assertEquals(ConnectionState.CONNECTING, stateManager.getConnectionState());
 
@@ -71,15 +73,17 @@ class WorkerStateManagerTest {
 
     @Test
     void testInvalidConnectionTransitionThrowsException() {
-        assertThrows(IllegalStateException.class, () -> {
-            stateManager.transitionConnection(ConnectionState.ONLINE);
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    stateManager.transitionConnection(ConnectionState.ONLINE);
+                });
     }
 
     @Test
     void testValidExecutionTransitions() {
         assertEquals(ExecutionState.OFFLINE, stateManager.getExecutionState());
-        
+
         stateManager.transitionExecution(ExecutionState.IDLE);
         assertEquals(ExecutionState.IDLE, stateManager.getExecutionState());
 
@@ -88,15 +92,17 @@ class WorkerStateManagerTest {
 
         stateManager.transitionExecution(ExecutionState.IDLE);
         assertEquals(ExecutionState.IDLE, stateManager.getExecutionState());
-        
+
         stateManager.transitionExecution(ExecutionState.OFFLINE);
         assertEquals(ExecutionState.OFFLINE, stateManager.getExecutionState());
     }
 
     @Test
     void testInvalidExecutionTransitionThrowsException() {
-        assertThrows(IllegalStateException.class, () -> {
-            stateManager.transitionExecution(ExecutionState.BUSY);
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    stateManager.transitionExecution(ExecutionState.BUSY);
+                });
     }
 }

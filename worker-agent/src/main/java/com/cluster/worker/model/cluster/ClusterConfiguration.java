@@ -4,8 +4,7 @@ public class ClusterConfiguration {
     private String clusterName;
     private ClusterConnectionInfo connectionInfo;
 
-    public ClusterConfiguration() {
-    }
+    public ClusterConfiguration() {}
 
     public ClusterConfiguration(String clusterName, ClusterConnectionInfo connectionInfo) {
         this.clusterName = clusterName;

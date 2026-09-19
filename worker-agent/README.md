@@ -1,30 +1,69 @@
 # Worker Agent Overview
 
-The Worker Agent is a lightweight daemon that runs on participating compute nodes (Slaves) within the Distributed Compute Cluster. It supplies computational resources to the cluster and awaits execution instructions from the Coordinator.
+## Purpose
+The Worker Agent is a lightweight daemon that runs on participating compute nodes (Slaves) within the Distributed Compute Cluster. It supplies computational resources to the cluster, actively monitors local hardware metrics, and executes assigned tasks provided by the Coordinator.
 
-## Responsibilities
+## Architecture
+The Worker Agent operates as a client to the central control plane:
+Coordinator
+↓ (STOMP / WebSocket)
+Worker Agent
+↓ (Local Dispatch)
+Task Execution / Hardware Monitoring
 
-* Connecting to the Coordinator.
-* Identifying and registering the machine.
-* Reporting exact hardware capabilities (CPUs, GPUs, RAM, Disk limits).
-* Periodically sending active heartbeats.
-* Receiving tasks to execute (Planned).
-* Returning computation results (Planned).
+## Worker Lifecycle
+The Worker Agent state machine (`WorkerStateManager`) tracks transition across three domains:
+- **Lifecycle State**: `STARTING` → `INITIALIZING` → `CONFIGURED`
+- **Connection State**: `DISCONNECTED` → `CONNECTING` → `REGISTERING` → `ONLINE`
+- **Execution State**: `OFFLINE` → `IDLE` ↔ `BUSY`
 
-## What is Built Till Now
+## Coordinator Communication
+Communication relies on a persistent STOMP WebSocket connection to the Coordinator.
+- **Connection Establishment**: Uses `api-key` in Basic Auth headers.
+- **Enrollment/Registration**: Validates credentials and sends a `REGISTER` message.
+- **Heartbeat & Resource Updates**: Periodically broadcasts liveness and OSHI hardware metrics.
+- **Reconnect Behavior**: Implements exponential backoff via `WebSocketConnectionManager` when disconnected.
 
-* **OSHI Hardware Monitoring**: Built-in integrations using OSHI to actively read System Metrics (CPU %, Memory limits/usage, Storage capacity/availability, and Network I/O).
-* **WebSocket Connection Manager**: Capable of creating a persistent WebSocket connection to the Coordinator. It manages STOMP sessions and intercepts connectivity drops.
-* **Resilient Reconnection Protocol**: Implements an exponential backoff retry mechanism (retrying starting at 5s up to max limits) if the connection to the Coordinator is lost.
-* **Registration & Heartbeat Cycles**: Lifecycle Services manage registering the worker ID, handling `REGISTER_ACK` STOMP events, and starting automated scheduled Heartbeat/Resource Update broadcast intervals over STOMP.
+## Task Execution
+The Worker Agent handles tasks asynchronously:
+1. **Message Reception**: `TaskMessageHandler` receives a `TASK_ASSIGN` payload via STOMP.
+2. **Validation**: The Worker validates resource constraints locally.
+3. **Handler Selection**: Uses the `TaskHandlerRegistry` to locate the appropriate logic for the task type.
+4. **Execution**: The `TaskExecutor` invokes the handler inside a managed thread.
+5. **Result/Status**: `TASK_STATUS` updates (Running, Completed, Failed) are streamed back to the Coordinator, along with the final `TASK_RESULT`.
 
-## Capabilities
+## Resource Monitoring
+Hardware monitoring is abstracted through `SystemMetricsProvider`. The primary implementation uses **OSHI** (`OshiSystemMetricsProvider`) to collect:
+- CPU core counts and current utilization.
+- Total memory and available memory.
+- Storage capacity.
+- Network I/O.
 
-* **State Tracking**: Safely tracks its connection state (`STARTING`, `REGISTERING`, `ONLINE`, `DISCONNECTED`, `STOPPING`) locally.
-* **Basic Auth Verification**: Configures and passes the required Basic `Authorization` header (`api-key`) inside WebSocket HTTP Handshakes seamlessly.
-* Operates completely asynchronously to reduce overhead on the host machine.
+## REST API
+The Worker Agent exposes local HTTP endpoints for diagnostics:
+- `GET /api/worker/status` - Basic liveness.
+- `GET /api/worker/info` - Hardware capabilities and limits.
 
-## To Be Implemented
+## Local UI
+The Worker Agent embeds its own local dashboard:
+- Located in `worker-agent/ui/`.
+- Served natively by Spring Boot.
+- Communicates directly with the local Worker Agent's REST API.
+- Provides visual diagnostics for connection latency, local metrics, and active tasks.
 
-* **Task Execution Engine**: Parsing incoming `TASK_ASSIGN` protocol messages and executing the task payload (e.g. running an arbitrary shell command, a container, or a python script).
-* **Task Lifecycle Management**: Implementing the logic to emit `TASK_STATUS` updates (Running, Failed, Completed) back to the Coordinator, along with the actual `TASK_RESULT`.
+## Configuration
+Important configurable properties in `application.yml`:
+- `worker.coordinator.url`: Base URL of the Coordinator.
+- `worker.coordinator.api-key`: Required secret to connect to the STOMP endpoint.
+- `cluster.worker.id`: Static ID of this node.
+
+## Key Packages
+For deep dives into the implementation:
+
+| Package | Responsibility | Documentation |
+|---------|----------------|---------------|
+| `api` | Local HTTP API boundaries. | [API README](./src/main/java/com/cluster/worker/api/README.md) |
+| `communication` | WebSocket lifecycle and STOMP parsing. | [Communication README](./src/main/java/com/cluster/worker/communication/README.md) |
+| `execution` | Core thread pool and task runner logic. | [Execution README](./src/main/java/com/cluster/worker/execution/README.md) |
+| `monitoring` | OSHI integration and metric polling. | [Monitoring README](./src/main/java/com/cluster/worker/monitoring/README.md) |
+| `task` | Handlers, task registry, and task state. | [Task README](./src/main/java/com/cluster/worker/task/README.md) |

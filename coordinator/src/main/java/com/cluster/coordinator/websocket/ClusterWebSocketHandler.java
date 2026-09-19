@@ -1,15 +1,19 @@
 package com.cluster.coordinator.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
-import java.util.concurrent.CopyOnWriteArrayList;
-
+/**
+ * Raw STOMP WebSocket handler managing active sessions with Worker Agents.
+ * Maintains a thread-safe list of active connections and provides broadcasting capabilities
+ * for pushing cluster events to all connected clients.
+ */
 @Component
 public class ClusterWebSocketHandler extends TextWebSocketHandler {
 

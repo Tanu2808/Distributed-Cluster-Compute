@@ -1,32 +1,25 @@
 export type WorkerLifecycleState =
-  | 'STARTING'
-  | 'INITIALIZING'
-  | 'SETUP_REQUIRED'
-  | 'LOADING_CONFIGURATION'
-  | 'CONFIGURED'
-  | 'STOPPING';
+  | "STARTING"
+  | "INITIALIZING"
+  | "SETUP_REQUIRED"
+  | "LOADING_CONFIGURATION"
+  | "CONFIGURED"
+  | "STOPPING";
 
 export type ConnectionState =
-  | 'DISCONNECTED'
-  | 'CONNECTING'
-  | 'REGISTERING'
-  | 'ONLINE'
-  | 'RECONNECTING';
+  "DISCONNECTED" | "CONNECTING" | "REGISTERING" | "ONLINE" | "RECONNECTING";
 
-export type ExecutionState =
-  | 'OFFLINE'
-  | 'IDLE'
-  | 'BUSY';
+export type ExecutionState = "OFFLINE" | "IDLE" | "BUSY";
 
 export type TaskState =
-  | 'RECEIVED'
-  | 'VALIDATING'
-  | 'QUEUED'
-  | 'RUNNING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'REJECTED'
-  | 'CANCELLED';
+  | "RECEIVED"
+  | "VALIDATING"
+  | "QUEUED"
+  | "RUNNING"
+  | "COMPLETED"
+  | "FAILED"
+  | "REJECTED"
+  | "CANCELLED";
 
 export interface WorkerStatusResponse {
   lifecycleState?: WorkerLifecycleState | string;
@@ -75,7 +68,7 @@ export interface WorkerSettingsResponse {
 
 export interface ClusterEnrollmentResponse {
   workerId: string | null;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED' | string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | string;
   message?: string;
 }
 

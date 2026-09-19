@@ -1,32 +1,38 @@
-# React + TypeScript + Vite
+# Coordinator Cluster Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Purpose
+The Coordinator Cluster Dashboard (Frontend) provides a cluster-wide visualization of the Distributed Compute platform. It gives administrators real-time visibility into logical cluster health, registered workers, aggregated hardware usage, and job statuses.
 
-Currently, two official plugins are available:
+## Architecture
+The application is built using React 18 and Vite. It serves as the visual presentation layer over the Coordinator node. 
+- It communicates downstream to the **Coordinator REST API** for standard data querying.
+- It connects to the **Coordinator STOMP WebSocket** (`/ws/coordinator`) for live streaming of cluster events and node availability.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Routing and Views
+- `/dashboard` (Dashboard): The primary overview screen showing live nodes and aggregated resource consumption.
+- `/nodes` (Nodes): Detailed table of all registered Worker Agents.
+- `/observability` (Observability): Streams incoming cluster events.
+- `/settings` (Settings): Cluster-wide configuration (e.g. Join codes).
 
-## React Compiler
+## State Management
+Global state is managed via **Zustand**. 
+- `clusterStore.ts` tracks real-time connection state and caches the latest WebSocket events, preventing unnecessary prop-drilling across the dashboard layout.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Key Files
+| File | Responsibility |
+|------|----------------|
+| `src/app/App.tsx` | The core layout provider outlining the sidebar, top navigation, and routing context. |
+| `src/state/clusterStore.ts` | Global Zustand store for cluster data and STOMP events. |
+| `src/services/websocketService.ts` | STOMP client implementation for connecting to the Coordinator. |
+| `src/hooks/useWebSocket.ts` | React hook that wraps the STOMP client to automatically sync with component lifecycles. |
+| `src/api/client.ts` | Centralized wrapper for making REST requests to the Coordinator. |
 
-## Expanding the Oxlint configuration
+## Development
+Make sure you have Node.js 18+ installed.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The application will start on `http://localhost:5173`.

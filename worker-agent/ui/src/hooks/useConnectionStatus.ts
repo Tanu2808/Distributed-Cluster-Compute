@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { connectionApi } from '../services/connectionApi';
-import type { ConnectionDiagnosticsResponse } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { connectionApi } from "../services/connectionApi";
+import type { ConnectionDiagnosticsResponse } from "../types";
 
 export function useConnectionStatus(pollingIntervalMs = 5000) {
-  const [connection, setConnection] = useState<ConnectionDiagnosticsResponse | null>(null);
+  const [connection, setConnection] =
+    useState<ConnectionDiagnosticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,11 @@ export function useConnectionStatus(pollingIntervalMs = 5000) {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch connection status');
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to fetch connection status",
+          );
         }
       } finally {
         if (mounted) {
@@ -45,7 +50,11 @@ export function useConnectionStatus(pollingIntervalMs = 5000) {
       setConnection(res);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch connection status');
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to fetch connection status",
+      );
     } finally {
       setRefreshing(false);
       setLoading(false);

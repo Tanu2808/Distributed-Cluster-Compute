@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertTriangle, X, RefreshCw } from 'lucide-react';
+import { useState } from "react";
+import { AlertTriangle, X, RefreshCw } from "lucide-react";
 
 interface ErrorBannerProps {
   message: string;

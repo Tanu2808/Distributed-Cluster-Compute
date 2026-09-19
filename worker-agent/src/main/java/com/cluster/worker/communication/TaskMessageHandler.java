@@ -5,14 +5,13 @@ import com.cluster.shared.protocol.MessageType;
 import com.cluster.shared.protocol.TaskAssignmentMessage;
 import com.cluster.worker.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Type;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.stereotype.Component;
-
-import java.lang.reflect.Type;
-import java.util.Map;
 
 @Component
 public class TaskMessageHandler implements StompFrameHandler {
@@ -33,14 +32,19 @@ public class TaskMessageHandler implements StompFrameHandler {
     }
 
     @Override
-    public void handleFrame(@org.springframework.lang.NonNull StompHeaders headers, @org.springframework.lang.Nullable Object payload) {
+    public void handleFrame(
+            @org.springframework.lang.NonNull StompHeaders headers,
+            @org.springframework.lang.Nullable Object payload) {
         if (payload instanceof MessageEnvelope) {
             MessageEnvelope<?> envelope = (MessageEnvelope<?>) payload;
-            
+
             if (envelope.getType() == MessageType.TASK_ASSIGN) {
                 try {
-                    // Convert payload to TaskAssignmentMessage since Jackson might parse it as a LinkedHashMap in a generic Envelope
-                    TaskAssignmentMessage assignMsg = objectMapper.convertValue(envelope.getPayload(), TaskAssignmentMessage.class);
+                    // Convert payload to TaskAssignmentMessage since Jackson might parse it as a
+                    // LinkedHashMap in a generic Envelope
+                    TaskAssignmentMessage assignMsg =
+                            objectMapper.convertValue(
+                                    envelope.getPayload(), TaskAssignmentMessage.class);
                     taskService.submitTask(assignMsg);
                 } catch (Exception e) {
                     log.error("Failed to parse TASK_ASSIGN message", e);
@@ -54,7 +58,9 @@ public class TaskMessageHandler implements StompFrameHandler {
                         taskId = (String) envelope.getPayload();
                     } else {
                         com.cluster.shared.protocol.TaskCancellationMessage cancelMsg =
-                                objectMapper.convertValue(envelope.getPayload(), com.cluster.shared.protocol.TaskCancellationMessage.class);
+                                objectMapper.convertValue(
+                                        envelope.getPayload(),
+                                        com.cluster.shared.protocol.TaskCancellationMessage.class);
                         if (cancelMsg != null) {
                             taskId = cancelMsg.getTaskId();
                         }
@@ -62,7 +68,9 @@ public class TaskMessageHandler implements StompFrameHandler {
                     if (taskId != null && !taskId.trim().isEmpty()) {
                         taskService.cancelTask(taskId.trim());
                     } else {
-                        log.warn("Received TASK_CANCEL with missing or empty taskId: {}", envelope.getPayload());
+                        log.warn(
+                                "Received TASK_CANCEL with missing or empty taskId: {}",
+                                envelope.getPayload());
                     }
                 } catch (Exception e) {
                     log.error("Failed to parse TASK_CANCEL message", e);

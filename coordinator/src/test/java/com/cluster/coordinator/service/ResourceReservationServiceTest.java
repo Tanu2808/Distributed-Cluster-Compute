@@ -1,5 +1,7 @@
 package com.cluster.coordinator.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.cluster.coordinator.model.AssignmentState;
 import com.cluster.coordinator.model.TaskAssignment;
 import com.cluster.coordinator.model.WorkerResource;
@@ -11,20 +13,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 @Transactional
 public class ResourceReservationServiceTest {
 
-    @Autowired
-    private ResourceReservationService resourceReservationService;
+    @Autowired private ResourceReservationService resourceReservationService;
 
-    @Autowired
-    private WorkerResourceRepository workerResourceRepository;
+    @Autowired private WorkerResourceRepository workerResourceRepository;
 
-    @Autowired
-    private TaskAssignmentRepository taskAssignmentRepository;
+    @Autowired private TaskAssignmentRepository taskAssignmentRepository;
 
     @BeforeEach
     public void setup() {
@@ -58,12 +55,12 @@ public class ResourceReservationServiceTest {
         // Verify resources are returned (since assignment is CANCELLED)
         assertEquals(4, resourceReservationService.getAvailableCpu("worker-1"));
         assertEquals(8000, resourceReservationService.getAvailableMemory("worker-1"));
-        
+
         // Verify TaskAssignment state is CANCELLED not deleted
         TaskAssignment assignment = taskAssignmentRepository.findByTaskId("task-1").orElseThrow();
         assertEquals(AssignmentState.CANCELLED, assignment.getState());
     }
-    
+
     @Test
     public void testDuplicateReservationFails() {
         WorkerResource wr = new WorkerResource("worker-1", 4, 8000, 0, 100000, 1000);
@@ -71,8 +68,10 @@ public class ResourceReservationServiceTest {
 
         resourceReservationService.reserve("worker-1", "task-1", 2, 2000);
 
-        assertThrows(IllegalStateException.class, () -> {
-            resourceReservationService.reserve("worker-1", "task-1", 1, 1000);
-        });
+        assertThrows(
+                IllegalStateException.class,
+                () -> {
+                    resourceReservationService.reserve("worker-1", "task-1", 1, 1000);
+                });
     }
 }

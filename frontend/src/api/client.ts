@@ -1,5 +1,5 @@
-import { config } from '../utils/config';
-import { ApiError } from '../types/api';
+import { config } from "../utils/config";
+import { ApiError } from "../types/api";
 
 // ─── Base HTTP helpers ────────────────────────────────────────────────────────
 
@@ -10,8 +10,8 @@ function buildUrl(path: string): string {
 
 function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
 
   if (!config.USE_MOCK_API && config.API_USERNAME && config.API_PASSWORD) {
@@ -39,7 +39,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(buildUrl(path), {
-    method: 'GET',
+    method: "GET",
     headers: getHeaders(),
   });
   return handleResponse<T>(response);
@@ -50,7 +50,7 @@ export async function apiPut<TBody, TResponse = TBody>(
   body: TBody,
 ): Promise<TResponse> {
   const response = await fetch(buildUrl(path), {
-    method: 'PUT',
+    method: "PUT",
     headers: getHeaders(),
     body: JSON.stringify(body),
   });

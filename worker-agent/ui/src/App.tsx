@@ -1,11 +1,11 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import Layout from './components/Layout'
-import Home from './pages/Home'
-import Setup from './pages/Setup'
-import Node from './pages/Node'
-import Tasks from './pages/Tasks'
-import Connection from './pages/Connection'
-import Settings from './pages/Settings'
+import { Routes, Route, Navigate } from "react-router-dom";
+import Layout from "./components/Layout";
+import Home from "./pages/Home";
+import Setup from "./pages/Setup";
+import Node from "./pages/Node";
+import Tasks from "./pages/Tasks";
+import Connection from "./pages/Connection";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -20,7 +20,7 @@ function App() {
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;

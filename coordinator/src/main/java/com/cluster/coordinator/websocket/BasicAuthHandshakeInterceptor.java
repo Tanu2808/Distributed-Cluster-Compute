@@ -1,12 +1,12 @@
 package com.cluster.coordinator.websocket;
 
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
 
 public class BasicAuthHandshakeInterceptor implements HandshakeInterceptor {
 
@@ -19,9 +19,13 @@ public class BasicAuthHandshakeInterceptor implements HandshakeInterceptor {
     }
 
     @Override
-    public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, 
-                                   WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
-        
+    public boolean beforeHandshake(
+            ServerHttpRequest request,
+            ServerHttpResponse response,
+            WebSocketHandler wsHandler,
+            Map<String, Object> attributes)
+            throws Exception {
+
         List<String> protocols = request.getHeaders().get("Sec-WebSocket-Protocol");
         if (protocols != null && !protocols.isEmpty()) {
             String combined = String.join(",", protocols);
@@ -32,8 +36,12 @@ public class BasicAuthHandshakeInterceptor implements HandshakeInterceptor {
                     String credentials = new String(Base64.getDecoder().decode(base64Credentials));
                     String[] credParts = credentials.split(":", 2);
                     if (credParts.length == 2) {
-                        if (expectedUsername.equals(credParts[0]) && expectedPassword.equals(credParts[1])) {
-                            response.getHeaders().set("Sec-WebSocket-Protocol", "basic"); // Must echo accepted protocol
+                        if (expectedUsername.equals(credParts[0])
+                                && expectedPassword.equals(credParts[1])) {
+                            response.getHeaders()
+                                    .set(
+                                            "Sec-WebSocket-Protocol",
+                                            "basic"); // Must echo accepted protocol
                             return true;
                         }
                     }
@@ -42,13 +50,15 @@ public class BasicAuthHandshakeInterceptor implements HandshakeInterceptor {
                 }
             }
         }
-        
+
         response.setStatusCode(org.springframework.http.HttpStatus.UNAUTHORIZED);
         return false;
     }
 
     @Override
-    public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response, 
-                               WebSocketHandler wsHandler, Exception exception) {
-    }
+    public void afterHandshake(
+            ServerHttpRequest request,
+            ServerHttpResponse response,
+            WebSocketHandler wsHandler,
+            Exception exception) {}
 }

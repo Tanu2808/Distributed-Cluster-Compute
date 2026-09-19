@@ -2,13 +2,12 @@ package com.cluster.coordinator.service.cluster;
 
 import com.cluster.coordinator.model.ClusterSettings;
 import com.cluster.coordinator.repository.ClusterSettingsRepository;
+import java.security.SecureRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.security.SecureRandom;
 
 @Service
 public class ClusterEnrollmentService {
@@ -27,29 +26,29 @@ public class ClusterEnrollmentService {
     @Value("${cluster.coordinator.advertised-url:http://localhost:${server.port:8080}}")
     private String advertisedUrl;
 
-    public ClusterEnrollmentService(ClusterSettingsRepository settingsRepository, com.cluster.coordinator.repository.WorkerRepository workerRepository) {
+    public ClusterEnrollmentService(
+            ClusterSettingsRepository settingsRepository,
+            com.cluster.coordinator.repository.WorkerRepository workerRepository) {
         this.settingsRepository = settingsRepository;
         this.workerRepository = workerRepository;
     }
 
-    /**
-     * Gets the current join code. If one does not exist, it generates and persists a new one.
-     */
+    /** Gets the current join code. If one does not exist, it generates and persists a new one. */
     @Transactional
     public String getJoinCode() {
-        return settingsRepository.findById(JOIN_CODE_KEY)
+        return settingsRepository
+                .findById(JOIN_CODE_KEY)
                 .map(ClusterSettings::getValue)
-                .orElseGet(() -> {
-                    String newCode = generateNewCode();
-                    settingsRepository.save(new ClusterSettings(JOIN_CODE_KEY, newCode));
-                    log.info("No existing cluster join code found. Generated a new one.");
-                    return newCode;
-                });
+                .orElseGet(
+                        () -> {
+                            String newCode = generateNewCode();
+                            settingsRepository.save(new ClusterSettings(JOIN_CODE_KEY, newCode));
+                            log.info("No existing cluster join code found. Generated a new one.");
+                            return newCode;
+                        });
     }
 
-    /**
-     * Generates a new join code and replaces the existing one.
-     */
+    /** Generates a new join code and replaces the existing one. */
     @Transactional
     public String rotateJoinCode() {
         String newCode = generateNewCode();
@@ -60,32 +59,41 @@ public class ClusterEnrollmentService {
 
     /**
      * Validates a provided join code and returns the cluster connection information.
-     * <p>
-     * Comparison is case-insensitive and formatting-independent: hyphens and whitespace
-     * are stripped from both the stored value and the supplied value before comparing.
-     * This means BTMV-WU8W-Y0HW-ZEXU, BTMVWU8WY0HWZEXU, and btmv wu8w y0hw zexu
-     * all represent the same logical join code.
+     *
+     * <p>Comparison is case-insensitive and formatting-independent: hyphens and whitespace are
+     * stripped from both the stored value and the supplied value before comparing. This means
+     * BTMV-WU8W-Y0HW-ZEXU, BTMVWU8WY0HWZEXU, and btmv wu8w y0hw zexu all represent the same logical
+     * join code.
      */
     @Transactional
     public EnrollmentResult enrollWorker(String providedCode, String workerId) {
-        if (providedCode == null || providedCode.isBlank() || workerId == null || workerId.isBlank()) {
+        if (providedCode == null
+                || providedCode.isBlank()
+                || workerId == null
+                || workerId.isBlank()) {
             return new EnrollmentResult(false, null, null, null);
         }
 
         // Must happen in a transaction for findById
-        String currentCode = settingsRepository.findById(JOIN_CODE_KEY)
-                .map(ClusterSettings::getValue)
-                .orElse(null);
+        String currentCode =
+                settingsRepository
+                        .findById(JOIN_CODE_KEY)
+                        .map(ClusterSettings::getValue)
+                        .orElse(null);
 
         // Normalize both sides so that XXXX-XXXX-XXXX-XXXX and XXXXXXXXXXXXXXXX
         // are treated as identical logical values.
         if (currentCode != null && normalizeCode(currentCode).equals(normalizeCode(providedCode))) {
-            // Note: clusterId logic. If the coordinator has a cluster ID stored, use it, else default.
-            String clusterId = settingsRepository.findById("CLUSTER_ID")
-                    .map(ClusterSettings::getValue)
-                    .orElse("local-cluster");
+            // Note: clusterId logic. If the coordinator has a cluster ID stored, use it, else
+            // default.
+            String clusterId =
+                    settingsRepository
+                            .findById("CLUSTER_ID")
+                            .map(ClusterSettings::getValue)
+                            .orElse("local-cluster");
 
-            // Return configured advertised coordinator URL so remote or local workers connect back properly
+            // Return configured advertised coordinator URL so remote or local workers connect back
+            // properly
             String coordinatorUrl = resolveCoordinatorUrl();
 
             // Generate runtime credential
@@ -93,9 +101,17 @@ public class ClusterEnrollmentService {
             String hash = hashCredential(rawCredential);
 
             // Fetch or create worker
-            com.cluster.coordinator.model.Worker worker = workerRepository.findById(workerId)
-                    .orElseGet(() -> new com.cluster.coordinator.model.Worker(workerId, "unknown", com.cluster.coordinator.model.WorkerState.REGISTERING));
-            
+            com.cluster.coordinator.model.Worker worker =
+                    workerRepository
+                            .findById(workerId)
+                            .orElseGet(
+                                    () ->
+                                            new com.cluster.coordinator.model.Worker(
+                                                    workerId,
+                                                    "unknown",
+                                                    com.cluster.coordinator.model.WorkerState
+                                                            .REGISTERING));
+
             worker.setRuntimeCredentialHash(hash);
             workerRepository.save(worker);
 
@@ -106,14 +122,18 @@ public class ClusterEnrollmentService {
     }
 
     /**
-     * Resolves the Coordinator URL advertised to workers during enrollment.
-     * Uses configured advertised-url, falling back to http://localhost:{server.port},
-     * and strips any trailing slash to ensure clean URL concatenation.
+     * Resolves the Coordinator URL advertised to workers during enrollment. Uses configured
+     * advertised-url, falling back to http://localhost:{server.port}, and strips any trailing slash
+     * to ensure clean URL concatenation.
      */
     private String resolveCoordinatorUrl() {
-        String url = (advertisedUrl != null && !advertisedUrl.isBlank())
-                ? advertisedUrl.trim()
-                : "http://localhost:" + (serverPort != null && !serverPort.isBlank() ? serverPort : "8080");
+        String url =
+                (advertisedUrl != null && !advertisedUrl.isBlank())
+                        ? advertisedUrl.trim()
+                        : "http://localhost:"
+                                + (serverPort != null && !serverPort.isBlank()
+                                        ? serverPort
+                                        : "8080");
         if (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
         }
@@ -121,8 +141,8 @@ public class ClusterEnrollmentService {
     }
 
     /**
-     * Normalizes a join code for comparison purposes by removing hyphens and whitespace
-     * and converting to uppercase. Does not modify how codes are stored or displayed.
+     * Normalizes a join code for comparison purposes by removing hyphens and whitespace and
+     * converting to uppercase. Does not modify how codes are stored or displayed.
      */
     private String normalizeCode(String code) {
         return code.replaceAll("[\\s\\-]", "").toUpperCase();
@@ -137,7 +157,13 @@ public class ClusterEnrollmentService {
     }
 
     private String formatCode(String raw) {
-        return raw.substring(0, 4) + "-" + raw.substring(4, 8) + "-" + raw.substring(8, 12) + "-" + raw.substring(12, 16);
+        return raw.substring(0, 4)
+                + "-"
+                + raw.substring(4, 8)
+                + "-"
+                + raw.substring(8, 12)
+                + "-"
+                + raw.substring(12, 16);
     }
 
     private String generateRandomCredential() {
@@ -149,7 +175,8 @@ public class ClusterEnrollmentService {
     private String hashCredential(String raw) {
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-            byte[] encodedhash = digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] encodedhash =
+                    digest.digest(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             return java.util.Base64.getEncoder().encodeToString(encodedhash);
         } catch (java.security.NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 not found", e);
@@ -162,7 +189,11 @@ public class ClusterEnrollmentService {
         private final String coordinatorUrl;
         private final String runtimeCredential;
 
-        public EnrollmentResult(boolean success, String clusterId, String coordinatorUrl, String runtimeCredential) {
+        public EnrollmentResult(
+                boolean success,
+                String clusterId,
+                String coordinatorUrl,
+                String runtimeCredential) {
             this.success = success;
             this.clusterId = clusterId;
             this.coordinatorUrl = coordinatorUrl;
@@ -180,7 +211,7 @@ public class ClusterEnrollmentService {
         public String getCoordinatorUrl() {
             return coordinatorUrl;
         }
-        
+
         public String getRuntimeCredential() {
             return runtimeCredential;
         }

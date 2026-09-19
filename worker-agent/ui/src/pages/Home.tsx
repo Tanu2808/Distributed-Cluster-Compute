@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { RefreshCw, Copy, Check, ArrowRight } from 'lucide-react';
-import { useDashboardHome } from '../hooks/useDashboardHome';
-import { useWorkerStatus } from '../hooks/useWorkerStatus';
-import { useConnectionStatus } from '../hooks/useConnectionStatus';
-import { useDashboardNode } from '../hooks/useDashboardNode';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { RefreshCw, Copy, Check, ArrowRight } from "lucide-react";
+import { useDashboardHome } from "../hooks/useDashboardHome";
+import { useWorkerStatus } from "../hooks/useWorkerStatus";
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
+import { useDashboardNode } from "../hooks/useDashboardNode";
 import {
   ConsoleCard,
   MetricCard,
@@ -12,10 +12,11 @@ import {
   StatusBadge,
   AlertBanner,
   Skeleton,
-} from '../components';
+} from "../components";
 
 function formatMb(mb: number | undefined): string {
-  if (mb === undefined || mb === null || isNaN(mb) || mb < 0) return 'Unavailable';
+  if (mb === undefined || mb === null || isNaN(mb) || mb < 0)
+    return "Unavailable";
   if (mb >= 1024) {
     return `${(mb / 1024).toFixed(1)} GB`;
   }
@@ -23,18 +24,24 @@ function formatMb(mb: number | undefined): string {
 }
 
 function formatHeartbeat(isoString: string | null | undefined): string {
-  if (!isoString) return 'None';
+  if (!isoString) return "None";
   try {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return 'None';
+    if (isNaN(date.getTime())) return "None";
     return date.toLocaleTimeString();
   } catch {
-    return 'None';
+    return "None";
   }
 }
 
 export default function Home() {
-  const { data: homeData, loading, refreshing, error, refetch } = useDashboardHome(4000);
+  const {
+    data: homeData,
+    loading,
+    refreshing,
+    error,
+    refetch,
+  } = useDashboardHome(4000);
   const { status, info } = useWorkerStatus(4000);
   const { connection } = useConnectionStatus(4000);
   const { data: nodeData } = useDashboardNode(10000);
@@ -49,23 +56,52 @@ export default function Home() {
   };
 
   // Safe Metric Calculations
-  const hasCpu = typeof homeData?.cpuUsagePercent === 'number' && !isNaN(homeData.cpuUsagePercent) && homeData.cpuUsagePercent >= 0;
-  const cpuValue = hasCpu ? `${homeData!.cpuUsagePercent.toFixed(1)}%` : 'Unavailable';
-  const cpuSubtext = homeData?.cpuCores ? `${homeData.cpuCores} cores` : undefined;
+  const hasCpu =
+    typeof homeData?.cpuUsagePercent === "number" &&
+    !isNaN(homeData.cpuUsagePercent) &&
+    homeData.cpuUsagePercent >= 0;
+  const cpuValue = hasCpu
+    ? `${homeData!.cpuUsagePercent.toFixed(1)}%`
+    : "Unavailable";
+  const cpuSubtext = homeData?.cpuCores
+    ? `${homeData.cpuCores} cores`
+    : undefined;
   const cpuProgress = hasCpu ? homeData!.cpuUsagePercent : undefined;
 
-  const hasMem = typeof homeData?.ramTotalMb === 'number' && homeData.ramTotalMb > 0 && typeof homeData?.ramUsageMb === 'number' && homeData.ramUsageMb >= 0;
-  const memValue = hasMem ? `${((homeData!.ramUsageMb / homeData!.ramTotalMb) * 100).toFixed(1)}%` : 'Unavailable';
-  const memSubtext = hasMem ? `${formatMb(homeData!.ramUsageMb)} / ${formatMb(homeData!.ramTotalMb)}` : undefined;
-  const memProgress = hasMem ? (homeData!.ramUsageMb / homeData!.ramTotalMb) * 100 : undefined;
+  const hasMem =
+    typeof homeData?.ramTotalMb === "number" &&
+    homeData.ramTotalMb > 0 &&
+    typeof homeData?.ramUsageMb === "number" &&
+    homeData.ramUsageMb >= 0;
+  const memValue = hasMem
+    ? `${((homeData!.ramUsageMb / homeData!.ramTotalMb) * 100).toFixed(1)}%`
+    : "Unavailable";
+  const memSubtext = hasMem
+    ? `${formatMb(homeData!.ramUsageMb)} / ${formatMb(homeData!.ramTotalMb)}`
+    : undefined;
+  const memProgress = hasMem
+    ? (homeData!.ramUsageMb / homeData!.ramTotalMb) * 100
+    : undefined;
 
-  const hasStorage = typeof homeData?.storageTotalMb === 'number' && homeData.storageTotalMb > 0 && typeof homeData?.storageUsageMb === 'number' && homeData.storageUsageMb >= 0;
-  const storageValue = hasStorage ? `${((homeData!.storageUsageMb / homeData!.storageTotalMb) * 100).toFixed(1)}%` : 'Unavailable';
-  const storageSubtext = hasStorage ? `${formatMb(homeData!.storageUsageMb)} / ${formatMb(homeData!.storageTotalMb)}` : undefined;
-  const storageProgress = hasStorage ? (homeData!.storageUsageMb / homeData!.storageTotalMb) * 100 : undefined;
+  const hasStorage =
+    typeof homeData?.storageTotalMb === "number" &&
+    homeData.storageTotalMb > 0 &&
+    typeof homeData?.storageUsageMb === "number" &&
+    homeData.storageUsageMb >= 0;
+  const storageValue = hasStorage
+    ? `${((homeData!.storageUsageMb / homeData!.storageTotalMb) * 100).toFixed(1)}%`
+    : "Unavailable";
+  const storageSubtext = hasStorage
+    ? `${formatMb(homeData!.storageUsageMb)} / ${formatMb(homeData!.storageTotalMb)}`
+    : undefined;
+  const storageProgress = hasStorage
+    ? (homeData!.storageUsageMb / homeData!.storageTotalMb) * 100
+    : undefined;
 
-  const currentWorkerStatus = status?.lifecycleState || homeData?.workerStatus || 'UNKNOWN';
-  const currentCoordinatorStatus = connection?.connectionState || homeData?.coordinatorConnection || 'UNKNOWN';
+  const currentWorkerStatus =
+    status?.lifecycleState || homeData?.workerStatus || "UNKNOWN";
+  const currentCoordinatorStatus =
+    connection?.connectionState || homeData?.coordinatorConnection || "UNKNOWN";
 
   // Initial Loading Skeleton
   if (loading && !homeData) {
@@ -109,7 +145,9 @@ export default function Home() {
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-console-text hover:bg-slate-50 bg-white border border-console-border hover:border-slate-400 rounded-sm transition-colors disabled:opacity-50"
           title="Refresh metrics"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? "animate-spin" : ""}`}
+          />
           <span>Refresh</span>
         </button>
       </div>
@@ -139,21 +177,39 @@ export default function Home() {
           value={cpuValue}
           subtext={cpuSubtext}
           progressPercent={cpuProgress}
-          status={cpuProgress && cpuProgress >= 90 ? 'critical' : cpuProgress && cpuProgress >= 75 ? 'warning' : 'normal'}
+          status={
+            cpuProgress && cpuProgress >= 90
+              ? "critical"
+              : cpuProgress && cpuProgress >= 75
+                ? "warning"
+                : "normal"
+          }
         />
         <MetricCard
           label="Memory Utilization"
           value={memValue}
           subtext={memSubtext}
           progressPercent={memProgress}
-          status={memProgress && memProgress >= 90 ? 'critical' : memProgress && memProgress >= 75 ? 'warning' : 'normal'}
+          status={
+            memProgress && memProgress >= 90
+              ? "critical"
+              : memProgress && memProgress >= 75
+                ? "warning"
+                : "normal"
+          }
         />
         <MetricCard
           label="Storage Utilization"
           value={storageValue}
           subtext={storageSubtext}
           progressPercent={storageProgress}
-          status={storageProgress && storageProgress >= 90 ? 'critical' : storageProgress && storageProgress >= 75 ? 'warning' : 'normal'}
+          status={
+            storageProgress && storageProgress >= 90
+              ? "critical"
+              : storageProgress && storageProgress >= 75
+                ? "warning"
+                : "normal"
+          }
         />
       </div>
 
@@ -167,7 +223,7 @@ export default function Home() {
               columns={1}
               items={[
                 {
-                  label: 'Worker ID',
+                  label: "Worker ID",
                   mono: true,
                   value: info?.workerId ? (
                     <button
@@ -176,7 +232,9 @@ export default function Home() {
                       className="inline-flex items-center gap-1.5 hover:text-console-accent text-console-text transition-colors"
                       title="Click to copy"
                     >
-                      <span className="truncate max-w-[220px] md:max-w-[320px]">{info.workerId}</span>
+                      <span className="truncate max-w-[220px] md:max-w-[320px]">
+                        {info.workerId}
+                      </span>
                       {copiedId ? (
                         <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       ) : (
@@ -184,24 +242,30 @@ export default function Home() {
                       )}
                     </button>
                   ) : (
-                    'Unavailable'
+                    "Unavailable"
                   ),
                 },
                 {
-                  label: 'Hostname',
-                  value: homeData?.workerHostname || 'Unavailable',
+                  label: "Hostname",
+                  value: homeData?.workerHostname || "Unavailable",
                 },
                 {
-                  label: 'Cluster',
-                  value: homeData?.clusterName || 'Not configured',
+                  label: "Cluster",
+                  value: homeData?.clusterName || "Not configured",
                 },
                 {
-                  label: 'Lifecycle State',
-                  value: <StatusBadge status={status?.lifecycleState || homeData?.workerStatus} />,
+                  label: "Lifecycle State",
+                  value: (
+                    <StatusBadge
+                      status={status?.lifecycleState || homeData?.workerStatus}
+                    />
+                  ),
                 },
                 {
-                  label: 'Execution State',
-                  value: <StatusBadge status={status?.executionState || 'IDLE'} />,
+                  label: "Execution State",
+                  value: (
+                    <StatusBadge status={status?.executionState || "IDLE"} />
+                  ),
                 },
               ]}
             />
@@ -222,17 +286,26 @@ export default function Home() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Endpoint</span>
-                <span className="font-mono text-[11px] text-console-text truncate max-w-[240px] md:max-w-[320px]" title={connection?.coordinatorUrl || undefined}>
-                  {connection?.coordinatorUrl || 'Not configured'}
+                <span className="text-console-textDim font-medium">
+                  Endpoint
+                </span>
+                <span
+                  className="font-mono text-[11px] text-console-text truncate max-w-[240px] md:max-w-[320px]"
+                  title={connection?.coordinatorUrl || undefined}
+                >
+                  {connection?.coordinatorUrl || "Not configured"}
                 </span>
               </div>
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Connection State</span>
+                <span className="text-console-textDim font-medium">
+                  Connection State
+                </span>
                 <StatusBadge status={currentCoordinatorStatus} />
               </div>
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Last Heartbeat</span>
+                <span className="text-console-textDim font-medium">
+                  Last Heartbeat
+                </span>
                 <span className="font-mono text-[11px] text-console-text">
                   {formatHeartbeat(connection?.lastSuccessfulHeartbeat)}
                 </span>
@@ -277,8 +350,10 @@ export default function Home() {
               </div>
 
               <div className="flex items-center justify-between py-1 border-t border-console-borderSubtle text-xs pt-3">
-                <span className="text-console-textDim font-medium">Execution Status</span>
-                <StatusBadge status={status?.executionState || 'IDLE'} />
+                <span className="text-console-textDim font-medium">
+                  Execution Status
+                </span>
+                <StatusBadge status={status?.executionState || "IDLE"} />
               </div>
             </div>
           </ConsoleCard>
@@ -300,24 +375,31 @@ export default function Home() {
               columns={1}
               items={[
                 {
-                  label: 'CPU Model',
-                  value: nodeData?.cpuModel || 'Unavailable',
+                  label: "CPU Model",
+                  value: nodeData?.cpuModel || "Unavailable",
                 },
                 {
-                  label: 'Cores',
-                  value: homeData?.cpuCores ? `${homeData.cpuCores} cores` : 'Unavailable',
+                  label: "Cores",
+                  value: homeData?.cpuCores
+                    ? `${homeData.cpuCores} cores`
+                    : "Unavailable",
                 },
                 {
-                  label: 'Total Memory',
+                  label: "Total Memory",
                   value: formatMb(homeData?.ramTotalMb),
                 },
                 {
-                  label: 'Platform',
-                  value: nodeData ? `${nodeData.osName} (${nodeData.architecture})` : 'Unavailable',
+                  label: "Platform",
+                  value: nodeData
+                    ? `${nodeData.osName} (${nodeData.architecture})`
+                    : "Unavailable",
                 },
                 {
-                  label: 'GPU Units',
-                  value: typeof homeData?.gpuCount === 'number' ? `${homeData.gpuCount}` : 'Unavailable',
+                  label: "GPU Units",
+                  value:
+                    typeof homeData?.gpuCount === "number"
+                      ? `${homeData.gpuCount}`
+                      : "Unavailable",
                 },
               ]}
             />

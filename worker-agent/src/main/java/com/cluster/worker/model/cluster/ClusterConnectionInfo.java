@@ -4,8 +4,7 @@ public class ClusterConnectionInfo {
     private String url;
     private JoinCode joinCode;
 
-    public ClusterConnectionInfo() {
-    }
+    public ClusterConnectionInfo() {}
 
     public ClusterConnectionInfo(String url, JoinCode joinCode) {
         this.url = url;

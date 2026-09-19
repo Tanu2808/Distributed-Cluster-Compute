@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useWorkerStatus } from '../hooks/useWorkerStatus';
-import { ConsoleHeader } from './ConsoleHeader';
-import { ConsoleSidebar } from './ConsoleSidebar';
-import { BreadcrumbBar } from './BreadcrumbBar';
+import { useEffect } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { useWorkerStatus } from "../hooks/useWorkerStatus";
+import { ConsoleHeader } from "./ConsoleHeader";
+import { ConsoleSidebar } from "./ConsoleSidebar";
+import { BreadcrumbBar } from "./BreadcrumbBar";
 
 export default function Layout() {
   const { status, info } = useWorkerStatus(3000);
@@ -11,8 +11,11 @@ export default function Layout() {
   const location = useLocation();
 
   useEffect(() => {
-    if (status?.lifecycleState === 'SETUP_REQUIRED' && location.pathname !== '/setup') {
-      navigate('/setup', { replace: true });
+    if (
+      status?.lifecycleState === "SETUP_REQUIRED" &&
+      location.pathname !== "/setup"
+    ) {
+      navigate("/setup", { replace: true });
     }
   }, [status?.lifecycleState, location.pathname, navigate]);
 

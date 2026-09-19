@@ -8,6 +8,6 @@ public class DefaultCoordinatorProvisioningService implements CoordinatorProvisi
     public boolean provisionLocalCoordinator(String clusterName) {
         // Just a dummy placeholder for now
         System.out.println("Provisioning local coordinator for cluster: " + clusterName);
-        return true; 
+        return true;
     }
 }

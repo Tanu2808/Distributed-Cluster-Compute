@@ -16,7 +16,8 @@ public class JoinCode {
         }
         String normalized = normalize(rawCode);
         if (!NORMALIZED_PATTERN.matcher(normalized).matches()) {
-            throw new IllegalArgumentException("Invalid join code format. Must be 16 alphanumeric characters.");
+            throw new IllegalArgumentException(
+                    "Invalid join code format. Must be 16 alphanumeric characters.");
         }
         this.code = normalized;
     }
@@ -31,10 +32,13 @@ public class JoinCode {
     }
 
     public String getFormattedCode() {
-        return code.substring(0, 4) + "-" + 
-               code.substring(4, 8) + "-" + 
-               code.substring(8, 12) + "-" + 
-               code.substring(12, 16);
+        return code.substring(0, 4)
+                + "-"
+                + code.substring(4, 8)
+                + "-"
+                + code.substring(8, 12)
+                + "-"
+                + code.substring(12, 16);
     }
 
     @Override
@@ -52,7 +56,8 @@ public class JoinCode {
 
     @Override
     public String toString() {
-        // Obfuscate in toString so it's not accidentally logged entirely, as requested "no use of join code as permanent auth credential"
+        // Obfuscate in toString so it's not accidentally logged entirely, as requested "no use of
+        // join code as permanent auth credential"
         // It's still a temporary secret.
         return "JoinCode{code='****-****-****-" + code.substring(12, 16) + "'}";
     }

@@ -1,12 +1,12 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { config } from '../utils/config';
-import { queryKeys } from '../types/api';
-import { fetchEvents } from '../api/eventsApi';
-import { mockEvents } from '../mock/events';
-import { wsService } from '../services/websocketService';
-import type { ClusterEvent } from '../types';
-import type { WsMessage } from '../types/api';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { config } from "../utils/config";
+import { queryKeys } from "../types/api";
+import { fetchEvents } from "../api/eventsApi";
+import { mockEvents } from "../mock/events";
+import { wsService } from "../services/websocketService";
+import type { ClusterEvent } from "../types";
+import type { WsMessage } from "../types/api";
 
 /**
  * Returns the cluster event list.
@@ -26,11 +26,11 @@ export function useClusterEvents() {
     const unsubscribe = wsService.onMessage((message: WsMessage) => {
       // Map WS event types that represent cluster events into ClusterEvent shape
       const eventTypes = [
-        'WORKER_CONNECTED',
-        'WORKER_DISCONNECTED',
-        'HEARTBEAT_UPDATE',
-        'CLUSTER_UPDATE',
-        'CONFIGURATION_CHANGED',
+        "WORKER_CONNECTED",
+        "WORKER_DISCONNECTED",
+        "HEARTBEAT_UPDATE",
+        "CLUSTER_UPDATE",
+        "CONFIGURATION_CHANGED",
       ];
 
       if (!eventTypes.includes(message.type)) return;
@@ -39,8 +39,8 @@ export function useClusterEvents() {
       queryClient.setQueryData<ClusterEvent[]>(queryKeys.events, (old = []) => {
         const liveEvent: ClusterEvent = {
           id: `ws-${Date.now()}`,
-          type: message.type as ClusterEvent['type'],
-          severity: 'INFO',
+          type: message.type as ClusterEvent["type"],
+          severity: "INFO",
           message: `[Live] ${message.type}`,
           timestamp: message.timestamp,
         };

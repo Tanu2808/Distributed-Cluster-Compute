@@ -7,7 +7,7 @@ public class WorkerTask {
     private String taskId;
     private String taskType;
     private Map<String, Object> input;
-    
+
     // Resource requirements
     private int requiredCpuCores;
     private long requiredMemoryMb;
@@ -17,19 +17,19 @@ public class WorkerTask {
     private String jobId;
     private Integer partitionId;
     private Integer totalPartitions;
-    
+
     // State tracking
     private TaskState state;
     private String errorMessage;
     private Object result;
-    
+
     // Metrics
     private Instant receivedAt;
     private Instant startedAt;
     private Instant completedAt;
 
     public WorkerTask() {
-        this.state = TaskState.RECEIVED;
+        this.state = TaskState.UNASSIGNED;
         this.receivedAt = Instant.now();
     }
 

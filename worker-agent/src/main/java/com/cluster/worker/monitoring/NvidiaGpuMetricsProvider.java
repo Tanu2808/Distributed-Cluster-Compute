@@ -1,10 +1,9 @@
 package com.cluster.worker.monitoring;
 
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 
 @Primary
 @Component
@@ -13,10 +12,12 @@ public class NvidiaGpuMetricsProvider implements GpuMetricsProvider {
     @Override
     public int getGpuCount() {
         try {
-            Process process = new ProcessBuilder("nvidia-smi", "--query-gpu=count", "--format=csv,noheader")
-                    .start();
-            
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            Process process =
+                    new ProcessBuilder("nvidia-smi", "--query-gpu=count", "--format=csv,noheader")
+                            .start();
+
+            try (BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line = reader.readLine();
                 if (line != null && !line.trim().isEmpty()) {
                     return Integer.parseInt(line.trim());
@@ -36,9 +37,11 @@ public class NvidiaGpuMetricsProvider implements GpuMetricsProvider {
             return "Unavailable";
         }
         try {
-            Process process = new ProcessBuilder("nvidia-smi", "--query-gpu=name", "--format=csv,noheader")
-                    .start();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            Process process =
+                    new ProcessBuilder("nvidia-smi", "--query-gpu=name", "--format=csv,noheader")
+                            .start();
+            try (BufferedReader reader =
+                    new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line = reader.readLine();
                 if (line != null && !line.trim().isEmpty()) {
                     return line.trim();

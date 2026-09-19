@@ -1,20 +1,19 @@
 package com.cluster.worker.persistence;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 @Component
 public class FileLocalStateStore implements LocalStateStore {
 
     private static final Logger log = LoggerFactory.getLogger(FileLocalStateStore.class);
     private static final String CONFIG_FILE = ".worker-config.json";
-    
+
     private final Path configPath;
 
     public FileLocalStateStore() {

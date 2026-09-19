@@ -1,50 +1,55 @@
-import { useState } from 'react';
-import { RefreshCw, Copy, Check } from 'lucide-react';
+import { useState } from "react";
+import { RefreshCw, Copy, Check } from "lucide-react";
 
-import { useConnectionStatus } from '../hooks/useConnectionStatus';
-import { useWorkerStatus } from '../hooks/useWorkerStatus';
+import { useConnectionStatus } from "../hooks/useConnectionStatus";
+import { useWorkerStatus } from "../hooks/useWorkerStatus";
 import {
   ConsoleCard,
   KeyValueTable,
   StatusBadge,
   AlertBanner,
   Skeleton,
-} from '../components';
+} from "../components";
 
 function formatDateTime(isoString?: string | null): string {
-  if (!isoString) return 'Not available';
+  if (!isoString) return "Not available";
   try {
     const d = new Date(isoString);
-    if (isNaN(d.getTime())) return 'Not available';
+    if (isNaN(d.getTime())) return "Not available";
     return d.toLocaleString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   } catch {
-    return 'Not available';
+    return "Not available";
   }
 }
 
-function getHeartbeatHealth(isoString?: string | null): { label: string; status: string } {
-  if (!isoString) return { label: 'Not available', status: 'UNKNOWN' };
+function getHeartbeatHealth(isoString?: string | null): {
+  label: string;
+  status: string;
+} {
+  if (!isoString) return { label: "Not available", status: "UNKNOWN" };
   try {
     const d = new Date(isoString);
-    if (isNaN(d.getTime())) return { label: 'Not available', status: 'UNKNOWN' };
+    if (isNaN(d.getTime()))
+      return { label: "Not available", status: "UNKNOWN" };
     const diffMs = Date.now() - d.getTime();
     if (diffMs < 20000) {
-      return { label: 'Healthy', status: 'ONLINE' };
+      return { label: "Healthy", status: "ONLINE" };
     }
-    return { label: 'Stale', status: 'BUSY' };
+    return { label: "Stale", status: "BUSY" };
   } catch {
-    return { label: 'Not available', status: 'UNKNOWN' };
+    return { label: "Not available", status: "UNKNOWN" };
   }
 }
 
 export default function Connection() {
-  const { connection, loading, refreshing, error, refetch } = useConnectionStatus(4000);
+  const { connection, loading, refreshing, error, refetch } =
+    useConnectionStatus(4000);
   const { status } = useWorkerStatus(4000);
 
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -56,8 +61,10 @@ export default function Connection() {
     setTimeout(() => setCopiedUrl(false), 1800);
   };
 
-  const heartbeatHealth = getHeartbeatHealth(connection?.lastSuccessfulHeartbeat);
-  const connectionState = connection?.connectionState || 'UNKNOWN';
+  const heartbeatHealth = getHeartbeatHealth(
+    connection?.lastSuccessfulHeartbeat,
+  );
+  const connectionState = connection?.connectionState || "UNKNOWN";
 
   // Initial Loading Skeleton
   if (loading && !connection) {
@@ -102,7 +109,9 @@ export default function Connection() {
           className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-console-text hover:bg-slate-50 bg-white border border-console-border hover:border-slate-400 rounded-sm transition-colors disabled:opacity-50 shrink-0"
           title="Refresh connection status"
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`w-3.5 h-3.5 text-console-textDim ${refreshing ? "animate-spin" : ""}`}
+          />
           <span>Refresh</span>
         </button>
       </div>
@@ -139,22 +148,28 @@ export default function Connection() {
             <span className="text-[10px] font-medium uppercase tracking-wider text-console-textDim block mb-1">
               Worker Lifecycle
             </span>
-            <StatusBadge status={status?.lifecycleState || 'UNKNOWN'} size="md" />
+            <StatusBadge
+              status={status?.lifecycleState || "UNKNOWN"}
+              size="md"
+            />
           </div>
 
           <div className="p-3 bg-console-subtle border border-console-borderSubtle rounded-sm">
             <span className="text-[10px] font-medium uppercase tracking-wider text-console-textDim block mb-1">
               Execution State
             </span>
-            <StatusBadge status={status?.executionState || 'IDLE'} size="md" />
+            <StatusBadge status={status?.executionState || "IDLE"} size="md" />
           </div>
 
           <div className="p-3 bg-console-subtle border border-console-borderSubtle rounded-sm">
             <span className="text-[10px] font-medium uppercase tracking-wider text-console-textDim block mb-1">
               Coordinator Endpoint
             </span>
-            <div className="font-mono text-xs text-console-text truncate mt-1" title={connection?.coordinatorUrl || undefined}>
-              {connection?.coordinatorUrl || 'Not configured'}
+            <div
+              className="font-mono text-xs text-console-text truncate mt-1"
+              title={connection?.coordinatorUrl || undefined}
+            >
+              {connection?.coordinatorUrl || "Not configured"}
             </div>
           </div>
         </div>
@@ -169,7 +184,7 @@ export default function Connection() {
               columns={1}
               items={[
                 {
-                  label: 'Coordinator URL',
+                  label: "Coordinator URL",
                   mono: true,
                   value: connection?.coordinatorUrl ? (
                     <button
@@ -188,27 +203,30 @@ export default function Connection() {
                       )}
                     </button>
                   ) : (
-                    'Not available'
+                    "Not available"
                   ),
                 },
                 {
-                  label: 'Connection State',
+                  label: "Connection State",
                   value: <StatusBadge status={connectionState} />,
                 },
                 {
-                  label: 'Connected Since',
+                  label: "Connected Since",
                   mono: true,
                   value: formatDateTime(connection?.connectedSince),
                 },
                 {
-                  label: 'Last Message Timestamp',
+                  label: "Last Message Timestamp",
                   mono: true,
                   value: formatDateTime(connection?.lastMessageTimestamp),
                 },
                 {
-                  label: 'Reconnect Count',
+                  label: "Reconnect Count",
                   mono: true,
-                  value: connection?.reconnectCount !== undefined ? String(connection.reconnectCount) : 'Not available',
+                  value:
+                    connection?.reconnectCount !== undefined
+                      ? String(connection.reconnectCount)
+                      : "Not available",
                 },
               ]}
             />
@@ -222,7 +240,8 @@ export default function Connection() {
                   {connection.lastConnectionError}
                 </div>
                 <div className="text-[11px] text-console-textDim">
-                  Recorded during the last failed socket handshake or transport timeout.
+                  Recorded during the last failed socket handshake or transport
+                  timeout.
                 </div>
               </div>
             </ConsoleCard>
@@ -237,7 +256,7 @@ export default function Connection() {
               columns={1}
               items={[
                 {
-                  label: 'Heartbeat Health',
+                  label: "Heartbeat Health",
                   value: (
                     <StatusBadge
                       status={heartbeatHealth.status}
@@ -246,14 +265,17 @@ export default function Connection() {
                   ),
                 },
                 {
-                  label: 'Last Successful Heartbeat',
+                  label: "Last Successful Heartbeat",
                   mono: true,
                   value: formatDateTime(connection?.lastSuccessfulHeartbeat),
                 },
                 {
-                  label: 'Connection Restarts',
+                  label: "Connection Restarts",
                   mono: true,
-                  value: connection?.reconnectCount !== undefined ? `${connection.reconnectCount} reconnects` : 'Not available',
+                  value:
+                    connection?.reconnectCount !== undefined
+                      ? `${connection.reconnectCount} reconnects`
+                      : "Not available",
                 },
               ]}
             />
@@ -263,15 +285,21 @@ export default function Connection() {
           <ConsoleCard title="Worker State">
             <div className="space-y-3">
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Lifecycle State</span>
-                <StatusBadge status={status?.lifecycleState || 'UNKNOWN'} />
+                <span className="text-console-textDim font-medium">
+                  Lifecycle State
+                </span>
+                <StatusBadge status={status?.lifecycleState || "UNKNOWN"} />
               </div>
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Execution State</span>
-                <StatusBadge status={status?.executionState || 'IDLE'} />
+                <span className="text-console-textDim font-medium">
+                  Execution State
+                </span>
+                <StatusBadge status={status?.executionState || "IDLE"} />
               </div>
               <div className="flex items-center justify-between py-1 border-b border-console-borderSubtle text-xs">
-                <span className="text-console-textDim font-medium">Transport State</span>
+                <span className="text-console-textDim font-medium">
+                  Transport State
+                </span>
                 <StatusBadge status={connectionState} />
               </div>
             </div>

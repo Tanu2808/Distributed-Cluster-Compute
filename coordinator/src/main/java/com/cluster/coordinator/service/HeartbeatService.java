@@ -7,16 +7,15 @@ import com.cluster.coordinator.model.WorkerHeartbeat;
 import com.cluster.coordinator.model.WorkerState;
 import com.cluster.coordinator.repository.WorkerHeartbeatRepository;
 import com.cluster.coordinator.repository.WorkerRepository;
+import com.cluster.coordinator.websocket.ClusterWebSocketHandler;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.cluster.coordinator.websocket.ClusterWebSocketHandler;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class HeartbeatService {
@@ -30,10 +29,11 @@ public class HeartbeatService {
     @Value("${cluster.heartbeat.timeout-seconds:30}")
     private int heartbeatTimeoutSeconds;
 
-    public HeartbeatService(WorkerRepository workerRepository,
-                            WorkerHeartbeatRepository workerHeartbeatRepository,
-                            EventService eventService,
-                            ClusterWebSocketHandler webSocketHandler) {
+    public HeartbeatService(
+            WorkerRepository workerRepository,
+            WorkerHeartbeatRepository workerHeartbeatRepository,
+            EventService eventService,
+            ClusterWebSocketHandler webSocketHandler) {
         this.workerRepository = workerRepository;
         this.workerHeartbeatRepository = workerHeartbeatRepository;
         this.eventService = eventService;
@@ -42,22 +42,33 @@ public class HeartbeatService {
 
     @Transactional
     public void processHeartbeat(String workerId, WorkerHeartbeatRequest request) {
-        Worker worker = workerRepository.findById(workerId)
-                .orElseThrow(() -> new IllegalArgumentException("Worker not found: " + workerId));
+        Worker worker =
+                workerRepository
+                        .findById(workerId)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalArgumentException(
+                                                "Worker not found: " + workerId));
 
         worker.setLastHeartbeat(LocalDateTime.now());
-        if (worker.getState() == WorkerState.HEARTBEAT_TIMEOUT || worker.getState() == WorkerState.OFFLINE) {
+        if (worker.getState() == WorkerState.HEARTBEAT_TIMEOUT
+                || worker.getState() == WorkerState.OFFLINE) {
             worker.setState(WorkerState.ONLINE);
-            eventService.recordEvent("WORKER_RECONNECTED", "Worker reconnected and is online", workerId);
+            eventService.recordEvent(
+                    "WORKER_RECONNECTED", "Worker reconnected and is online", workerId);
         } else if (worker.getState() == WorkerState.REGISTERING) {
             worker.setState(WorkerState.ONLINE);
         }
         workerRepository.save(worker);
 
-        WorkerHeartbeat heartbeat = new WorkerHeartbeat(workerId, request.getCpuUsagePercent(),
-                request.getMemoryUsagePercent(), request.getActiveTasks());
+        WorkerHeartbeat heartbeat =
+                new WorkerHeartbeat(
+                        workerId,
+                        request.getCpuUsagePercent(),
+                        request.getMemoryUsagePercent(),
+                        request.getActiveTasks());
         workerHeartbeatRepository.save(heartbeat);
-        
+
         webSocketHandler.broadcast(new WsMessageDto<>("HEARTBEAT_UPDATE", workerId));
     }
 
@@ -71,9 +82,11 @@ public class HeartbeatService {
             if (worker.getState() == WorkerState.ONLINE || worker.getState() == WorkerState.BUSY) {
                 worker.setState(WorkerState.HEARTBEAT_TIMEOUT);
                 workerRepository.save(worker);
-                eventService.recordEvent("WORKER_TIMEOUT", "Worker heartbeat timed out", worker.getId());
+                eventService.recordEvent(
+                        "WORKER_TIMEOUT", "Worker heartbeat timed out", worker.getId());
                 log.warn("Worker heartbeat timed out: {}", worker.getId());
-                webSocketHandler.broadcast(new WsMessageDto<>("WORKER_DISCONNECTED", worker.getId()));
+                webSocketHandler.broadcast(
+                        new WsMessageDto<>("WORKER_DISCONNECTED", worker.getId()));
             }
         }
     }

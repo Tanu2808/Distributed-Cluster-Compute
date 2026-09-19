@@ -1,10 +1,9 @@
 package com.cluster.worker.monitoring;
 
+import java.util.List;
 import org.springframework.stereotype.Component;
 import oshi.SystemInfo;
 import oshi.hardware.NetworkIF;
-
-import java.util.List;
 
 @Component
 public class OshiNetworkMetricsProvider implements NetworkMetricsProvider {

@@ -1,43 +1,49 @@
-import React from 'react';
-import { AlertCircle, CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import React from "react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  AlertTriangle,
+  X,
+} from "lucide-react";
 
 interface AlertBannerProps {
-  type?: 'error' | 'warning' | 'info' | 'success';
+  type?: "error" | "warning" | "info" | "success";
   message: React.ReactNode;
   onClose?: () => void;
   className?: string;
 }
 
 export const AlertBanner: React.FC<AlertBannerProps> = ({
-  type = 'info',
+  type = "info",
   message,
   onClose,
-  className = '',
+  className = "",
 }) => {
-  let containerStyles = 'bg-blue-50 border-blue-200 text-blue-900';
+  let containerStyles = "bg-blue-50 border-blue-200 text-blue-900";
   let Icon = Info;
-  let iconStyles = 'text-blue-600';
+  let iconStyles = "text-blue-600";
 
-  if (type === 'error') {
-    containerStyles = 'bg-rose-50 border-rose-200 text-rose-900';
+  if (type === "error") {
+    containerStyles = "bg-rose-50 border-rose-200 text-rose-900";
     Icon = AlertCircle;
-    iconStyles = 'text-rose-600';
-  } else if (type === 'warning') {
-    containerStyles = 'bg-amber-50 border-amber-200 text-amber-900';
+    iconStyles = "text-rose-600";
+  } else if (type === "warning") {
+    containerStyles = "bg-amber-50 border-amber-200 text-amber-900";
     Icon = AlertTriangle;
-    iconStyles = 'text-amber-600';
-  } else if (type === 'success') {
-    containerStyles = 'bg-emerald-50 border-emerald-200 text-emerald-900';
+    iconStyles = "text-amber-600";
+  } else if (type === "success") {
+    containerStyles = "bg-emerald-50 border-emerald-200 text-emerald-900";
     Icon = CheckCircle2;
-    iconStyles = 'text-emerald-600';
+    iconStyles = "text-emerald-600";
   }
 
   return (
-    <div className={`flex items-start gap-2.5 p-3 rounded-sm border text-xs leading-relaxed ${containerStyles} ${className}`}>
+    <div
+      className={`flex items-start gap-2.5 p-3 rounded-sm border text-xs leading-relaxed ${containerStyles} ${className}`}
+    >
       <Icon className={`w-4 h-4 shrink-0 mt-0.5 ${iconStyles}`} />
-      <div className="flex-1 font-mono text-[11px]">
-        {message}
-      </div>
+      <div className="flex-1 font-mono text-[11px]">{message}</div>
       {onClose && (
         <button
           onClick={onClose}

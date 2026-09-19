@@ -1,12 +1,12 @@
-import { apiGet } from './client';
-import type { Worker } from '../types';
+import { apiGet } from "./client";
+import type { Worker } from "../types";
 
 /**
  * GET /api/workers
  * Returns the list of all registered workers.
  */
 export function fetchWorkers(): Promise<Worker[]> {
-  return apiGet<Worker[]>('/api/workers');
+  return apiGet<Worker[]>("/api/workers");
 }
 
 /**

@@ -7,6 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Manages the internal state machine for the Worker Agent.
+ * Tracks and validates transitions across Lifecycle, Connection, and Execution states.
+ * Thread-safe to ensure state consistency across asynchronous background events.
+ */
 @Component
 public class WorkerStateManager {
     private static final Logger log = LoggerFactory.getLogger(WorkerStateManager.class);
@@ -15,19 +20,36 @@ public class WorkerStateManager {
     private ConnectionState connectionState = ConnectionState.DISCONNECTED;
     private ExecutionState executionState = ExecutionState.OFFLINE;
 
+    /**
+     * Attempts to transition the overarching lifecycle state of the worker agent.
+     * Throws an exception if the transition violates the defined state machine logic.
+     *
+     * @param newState The requested lifecycle state.
+     */
     public synchronized void transitionLifecycle(WorkerLifecycleState newState) {
         if (!isValidLifecycleTransition(this.lifecycleState, newState)) {
             log.warn("Invalid lifecycle transition from {} to {}", this.lifecycleState, newState);
-            throw new IllegalStateException("Invalid lifecycle transition from " + this.lifecycleState + " to " + newState);
+            throw new IllegalStateException(
+                    "Invalid lifecycle transition from " + this.lifecycleState + " to " + newState);
         }
         log.info("Lifecycle state transition: {} -> {}", this.lifecycleState, newState);
         this.lifecycleState = newState;
     }
 
+    /**
+     * Attempts to transition the WebSocket connection state to the Coordinator.
+     * Throws an exception if the transition violates the defined state machine logic.
+     *
+     * @param newState The requested connection state.
+     */
     public synchronized void transitionConnection(ConnectionState newState) {
         if (!isValidConnectionTransition(this.connectionState, newState)) {
             log.warn("Invalid connection transition from {} to {}", this.connectionState, newState);
-            throw new IllegalStateException("Invalid connection transition from " + this.connectionState + " to " + newState);
+            throw new IllegalStateException(
+                    "Invalid connection transition from "
+                            + this.connectionState
+                            + " to "
+                            + newState);
         }
         log.info("Connection state transition: {} -> {}", this.connectionState, newState);
         this.connectionState = newState;
@@ -36,20 +58,23 @@ public class WorkerStateManager {
     public synchronized void transitionExecution(ExecutionState newState) {
         if (!isValidExecutionTransition(this.executionState, newState)) {
             log.warn("Invalid execution transition from {} to {}", this.executionState, newState);
-            throw new IllegalStateException("Invalid execution transition from " + this.executionState + " to " + newState);
+            throw new IllegalStateException(
+                    "Invalid execution transition from " + this.executionState + " to " + newState);
         }
         log.info("Execution state transition: {} -> {}", this.executionState, newState);
         this.executionState = newState;
     }
 
-    private boolean isValidLifecycleTransition(WorkerLifecycleState current, WorkerLifecycleState next) {
+    private boolean isValidLifecycleTransition(
+            WorkerLifecycleState current, WorkerLifecycleState next) {
         if (next == WorkerLifecycleState.STOPPING) return true;
-        
+
         switch (current) {
             case STARTING:
                 return next == WorkerLifecycleState.INITIALIZING;
             case INITIALIZING:
-                return next == WorkerLifecycleState.SETUP_REQUIRED || next == WorkerLifecycleState.LOADING_CONFIGURATION;
+                return next == WorkerLifecycleState.SETUP_REQUIRED
+                        || next == WorkerLifecycleState.LOADING_CONFIGURATION;
             case LOADING_CONFIGURATION:
                 return next == WorkerLifecycleState.CONFIGURED;
             case SETUP_REQUIRED:
@@ -71,7 +96,9 @@ public class WorkerStateManager {
             case RECONNECTING:
                 return next == ConnectionState.CONNECTING || next == ConnectionState.DISCONNECTED;
             case CONNECTING:
-                return next == ConnectionState.REGISTERING || next == ConnectionState.DISCONNECTED || next == ConnectionState.RECONNECTING;
+                return next == ConnectionState.REGISTERING
+                        || next == ConnectionState.DISCONNECTED
+                        || next == ConnectionState.RECONNECTING;
             case REGISTERING:
                 return next == ConnectionState.ONLINE || next == ConnectionState.DISCONNECTED;
             case ONLINE:

@@ -1,17 +1,16 @@
 package com.cluster.worker.task;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.cluster.worker.config.WorkerConfig;
 import com.cluster.worker.model.SystemMetrics;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class ResourceAdmissionServiceTest {
 
@@ -116,16 +115,17 @@ class ResourceAdmissionServiceTest {
         // Usable memory: 4096 - 512 = 3584 MB. Each task asks for 500 MB. Max admitted: 7 tasks.
         for (int i = 0; i < threads; i++) {
             final String id = "task-" + i;
-            pool.submit(() -> {
-                WorkerTask task = new WorkerTask();
-                task.setTaskId(id);
-                task.setRequiredMemoryMb(500);
-                task.setRequiredCpuCores(0);
-                if (admissionService.tryReserve(task, metrics, executionConfig)) {
-                    successCount.incrementAndGet();
-                }
-                latch.countDown();
-            });
+            pool.submit(
+                    () -> {
+                        WorkerTask task = new WorkerTask();
+                        task.setTaskId(id);
+                        task.setRequiredMemoryMb(500);
+                        task.setRequiredCpuCores(0);
+                        if (admissionService.tryReserve(task, metrics, executionConfig)) {
+                            successCount.incrementAndGet();
+                        }
+                        latch.countDown();
+                    });
         }
 
         assertTrue(latch.await(5, TimeUnit.SECONDS));

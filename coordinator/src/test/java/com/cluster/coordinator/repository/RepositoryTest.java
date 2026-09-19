@@ -1,26 +1,23 @@
 package com.cluster.coordinator.repository;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import com.cluster.coordinator.model.Job;
 import com.cluster.coordinator.model.JobState;
 import com.cluster.coordinator.model.Task;
 import com.cluster.coordinator.model.TaskState;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 @SpringBootTest
 public class RepositoryTest {
 
-    @Autowired
-    private JobRepository jobRepository;
+    @Autowired private JobRepository jobRepository;
 
-    @Autowired
-    private TaskRepository taskRepository;
+    @Autowired private TaskRepository taskRepository;
 
     @Test
     public void testJobToTaskRelationshipAndQueries() {

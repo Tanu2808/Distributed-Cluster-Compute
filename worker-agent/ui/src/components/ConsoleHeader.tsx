@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { Server, Copy, Check } from 'lucide-react';
-import { StatusBadge } from './StatusBadge';
-import type { WorkerStatusResponse, WorkerInfoResponse } from '../types';
+import React, { useState } from "react";
+import { Server, Copy, Check } from "lucide-react";
+import { StatusBadge } from "./StatusBadge";
+import type { WorkerStatusResponse, WorkerInfoResponse } from "../types";
 
 interface ConsoleHeaderProps {
   status: WorkerStatusResponse | null;
   info: WorkerInfoResponse | null;
 }
 
-export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ status, info }) => {
+export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({
+  status,
+  info,
+}) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopyId = () => {
@@ -19,9 +22,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ status, info }) =>
   };
 
   const getStatusString = () => {
-    if (status?.lifecycleState === 'SETUP_REQUIRED') return 'SETUP_REQUIRED';
+    if (status?.lifecycleState === "SETUP_REQUIRED") return "SETUP_REQUIRED";
     if (status?.connectionState) return status.connectionState;
-    return status?.status || 'UNKNOWN';
+    return status?.status || "UNKNOWN";
   };
 
   return (
@@ -51,7 +54,9 @@ export const ConsoleHeader: React.FC<ConsoleHeaderProps> = ({ status, info }) =>
             title="Click to copy Worker ID"
           >
             <span className="text-console-textDim text-[10px]">ID:</span>
-            <span className="max-w-[120px] md:max-w-[200px] truncate">{info.workerId}</span>
+            <span className="max-w-[120px] md:max-w-[200px] truncate">
+              {info.workerId}
+            </span>
             {copied ? (
               <Check className="w-3 h-3 text-emerald-600 shrink-0" />
             ) : (

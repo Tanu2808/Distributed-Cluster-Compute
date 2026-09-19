@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { dashboardApi } from '../services/dashboardApi';
-import type { DashboardNodeResponse } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { dashboardApi } from "../services/dashboardApi";
+import type { DashboardNodeResponse } from "../types";
 
 export function useDashboardNode(pollingIntervalMs = 5000) {
   const [data, setData] = useState<DashboardNodeResponse | null>(null);
@@ -20,7 +20,9 @@ export function useDashboardNode(pollingIntervalMs = 5000) {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch node data');
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch node data",
+          );
         }
       } finally {
         if (mounted) {
@@ -45,7 +47,9 @@ export function useDashboardNode(pollingIntervalMs = 5000) {
       setData(res);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch node data');
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch node data",
+      );
     } finally {
       setRefreshing(false);
       setLoading(false);

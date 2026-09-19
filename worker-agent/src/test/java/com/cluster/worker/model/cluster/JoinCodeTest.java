@@ -1,7 +1,8 @@
 package com.cluster.worker.model.cluster;
 
-import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
 
 class JoinCodeTest {
 
@@ -22,12 +23,15 @@ class JoinCodeTest {
     @Test
     void testInvalidLength() {
         assertThrows(IllegalArgumentException.class, () -> new JoinCode("ABCD-1234"));
-        assertThrows(IllegalArgumentException.class, () -> new JoinCode("ABCD-1234-EFGH-5678-9012"));
+        assertThrows(
+                IllegalArgumentException.class, () -> new JoinCode("ABCD-1234-EFGH-5678-9012"));
     }
 
     @Test
     void testInvalidCharacters() {
-        assertThrows(IllegalArgumentException.class, () -> new JoinCode("ABCD-1234-EFGH-567*")); // Special char
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new JoinCode("ABCD-1234-EFGH-567*")); // Special char
     }
 
     @Test

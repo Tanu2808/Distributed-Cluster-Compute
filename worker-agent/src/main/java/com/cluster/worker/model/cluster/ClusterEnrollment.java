@@ -11,8 +11,7 @@ public class ClusterEnrollment {
     private Status status;
     private String message;
 
-    public ClusterEnrollment() {
-    }
+    public ClusterEnrollment() {}
 
     public ClusterEnrollment(String workerId, Status status, String message) {
         this.workerId = workerId;

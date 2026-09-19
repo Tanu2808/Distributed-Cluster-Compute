@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { dashboardApi } from '../services/dashboardApi';
-import type { DashboardHomeResponse } from '../types';
+import { useState, useEffect, useCallback } from "react";
+import { dashboardApi } from "../services/dashboardApi";
+import type { DashboardHomeResponse } from "../types";
 
 export function useDashboardHome(pollingIntervalMs = 5000) {
   const [data, setData] = useState<DashboardHomeResponse | null>(null);
@@ -20,7 +20,11 @@ export function useDashboardHome(pollingIntervalMs = 5000) {
         }
       } catch (err) {
         if (mounted) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Failed to fetch dashboard data",
+          );
         }
       } finally {
         if (mounted) {
@@ -45,7 +49,9 @@ export function useDashboardHome(pollingIntervalMs = 5000) {
       setData(res);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch dashboard data",
+      );
     } finally {
       setRefreshing(false);
       setLoading(false);

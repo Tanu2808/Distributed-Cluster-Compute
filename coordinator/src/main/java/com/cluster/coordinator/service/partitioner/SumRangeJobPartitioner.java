@@ -6,11 +6,10 @@ import com.cluster.coordinator.model.TaskState;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.stereotype.Component;
 
 @Component
 public class SumRangeJobPartitioner implements JobPartitioner {
@@ -32,11 +31,12 @@ public class SumRangeJobPartitioner implements JobPartitioner {
     public List<Task> partition(Job job, int targetPartitions) {
         long start;
         long end;
-        
+
         try {
             JsonNode inputNode = objectMapper.readTree(job.getInput());
             if (!inputNode.has("start") || !inputNode.has("end")) {
-                throw new IllegalArgumentException("SUM_RANGE job requires 'start' and 'end' input parameters");
+                throw new IllegalArgumentException(
+                        "SUM_RANGE job requires 'start' and 'end' input parameters");
             }
             start = inputNode.get("start").asLong();
             end = inputNode.get("end").asLong();
@@ -45,7 +45,8 @@ public class SumRangeJobPartitioner implements JobPartitioner {
         }
 
         if (start > end) {
-            throw new IllegalArgumentException("Invalid range: start must be less than or equal to end");
+            throw new IllegalArgumentException(
+                    "Invalid range: start must be less than or equal to end");
         }
 
         long span = (end - start) + 1;
@@ -53,7 +54,7 @@ public class SumRangeJobPartitioner implements JobPartitioner {
         // Ensure we don't violate the MAX_RANGE_SPAN safety rule
         long minPartitionsRequired = (span + MAX_RANGE_SPAN - 1) / MAX_RANGE_SPAN;
         int actualPartitions = Math.max(targetPartitions, (int) minPartitionsRequired);
-        
+
         // Also ensure actualPartitions isn't greater than span
         actualPartitions = (int) Math.min(actualPartitions, span);
         if (actualPartitions <= 0) actualPartitions = 1;
@@ -81,10 +82,10 @@ public class SumRangeJobPartitioner implements JobPartitioner {
             task.setJobId(job.getId());
             task.setTaskType(TYPE);
             task.setPartitionId(i);
-            
+
             String taskInput = String.format("{\"start\":%d,\"end\":%d}", currentStart, currentEnd);
             task.setInput(taskInput);
-            
+
             task.setRequiredCpu(currentCpu);
             task.setRequiredMemory(currentMemory);
             task.setState(TaskState.UNASSIGNED);

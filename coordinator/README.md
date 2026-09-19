@@ -1,36 +1,55 @@
 # Coordinator
 
-The Coordinator is the central **control plane** (Master) of the Distributed Compute Cluster. It acts as the brain of the network, orchestrating workers and aggregating their capabilities into a logical cluster view.
+## Purpose
+The Coordinator acts as the central control plane (Master) of the Distributed Compute Cluster. It orchestrates workers, aggregates their capabilities into a logical cluster view, and manages the execution lifecycle of distributed compute jobs.
 
 ## Responsibilities
+- **Worker Registration**: Handling new node enrollment and API key validation.
+- **Worker Lifecycle**: Tracking STOMP heartbeats to determine worker health and liveness.
+- **Resource Aggregation**: Aggregating physical resource metrics (CPU, RAM) across the cluster.
+- **Job Management**: Creating and tracking the overall state of distributed Jobs.
+- **Task Partitioning**: Splitting logical Jobs into discrete executable Tasks.
+- **Scheduling**: Assigning Tasks to available Workers based on physical resource constraints.
+- **Task Status/Result Tracking**: Handling updates from Workers as tasks progress.
+- **REST APIs**: Exposing cluster state to the Coordinator frontend.
+- **WebSocket/STOMP**: Managing real-time persistent connections with active Worker Agents.
+- **Security**: Validating Basic Authentication for WebSocket connections.
+- **Persistence**: Recording cluster events, worker state, and job history.
 
-* Worker registration and authentication.
-* Tracking heartbeat events to monitor worker health and liveness.
-* Managing real-time persistent connections with active Worker Agents.
-* Aggregating resource metrics (CPU, RAM, GPU, Disk).
-* Task and Job delegation (Planned).
-* Providing REST and WebSocket APIs for the frontend UI.
+## Architecture
+The Coordinator is the central hub:
+- It communicates downstream with **Worker Agents** over a persistent WebSocket (STOMP) connection using standardized messages from the **Shared** module.
+- It communicates upstream with the **Coordinator Frontend** via REST APIs and a dedicated WebSocket channel for live event streaming.
 
-## What is Built Till Now
+## Job Execution Flow
+1. A client submits a Job payload via the REST API (`JobController`).
+2. The `JobService` initializes the Job entity.
+3. The `JobPartitioner` evaluates the Job and splits it into multiple `Task` entities based on resource requirements.
+4. The `SchedulerService` periodically matches unassigned Tasks to `ONLINE` Workers with sufficient CPU and RAM.
+5. Once scheduled, a `TASK_ASSIGN` message is dispatched to the chosen Worker via STOMP.
+6. The Worker executes the task and streams `TASK_STATUS` messages back to the Coordinator, updating the task and job state.
 
-* **STOMP WebSocket Server**: Fully integrated bidirectional WebSocket server over STOMP, mapped to `/ws/coordinator`.
-* **Worker Message Controller**: Consumes typed events over STOMP for `REGISTER`, `HEARTBEAT`, and `RESOURCE_UPDATE`.
-* **Security layer**: Basic Authentication configured directly into the WebSocket handshake process to validate connecting Worker Agents against an `api-key`.
-* **Event Service**: Records incoming cluster events to a persistent database layer.
-* **REST API Endpoints**: Exposes data required for the frontend Dashboard and Observability pages.
+## REST API
+Key endpoints provided by the Coordinator:
+- `GET /api/workers` - Lists registered workers.
+- `GET /api/workers/{id}` - Details for a specific worker.
+- `GET /api/cluster/resources` - Aggregates CPU/RAM across the cluster.
+- `POST /api/cluster/join-code/rotate` - Rotates join codes for new worker enrollment.
+- `POST /api/jobs` - Submits a new job.
+- `GET /api/jobs/{id}` - Checks job status.
 
-## Capabilities
+## WebSocket
+The Coordinator relies on Spring WebSocket (STOMP):
+- **Connection Lifecycle**: Managed via `ClusterWebSocketHandler` to track session connects/disconnects.
+- **Authentication**: `BasicAuthHandshakeInterceptor` enforces security during the initial HTTP upgrade.
+- **Message Routing**: Typed messages like `REGISTER` and `HEARTBEAT` are routed to controllers.
 
-* Capable of handling persistent STOMP sessions for multiple concurrent workers.
-* Aggregates physical views (per-worker capabilities) into a logical cluster-wide resource pool view.
-* Tracks time-based heartbeats to determine if a worker goes offline.
+## Key Packages
+For more architectural details, refer to the package-level documentation:
 
-## Configuration
-
-| Property | Environment Variable | Default | Description |
-|---|---|---|---|
-| `cluster.coordinator.advertised-url` | `COORDINATOR_ADVERTISED_URL` or `CLUSTER_COORDINATOR_ADVERTISED_URL` | `http://localhost:${server.port:8080}` | Reachable base URL of the Coordinator returned to Workers during enrollment. For LAN or remote deployments, set to the reachable IP or hostname (e.g. `http://192.168.137.165:8080`). |
-| `cluster.security.api-username` | `CLUSTER_SECURITY_API_USERNAME` | `admin` | Username for basic authentication |
-| `cluster.security.api-password` | `CLUSTER_SECURITY_API_PASSWORD` | `admin_secret` | Password for basic authentication |
-| `cluster.heartbeat.timeout-seconds` | `CLUSTER_HEARTBEAT_TIMEOUT_SECONDS` | `30` | Heartbeat timeout threshold in seconds |
-
+| Package | Responsibility | Documentation |
+|---------|----------------|---------------|
+| `controller` | REST API boundaries and STOMP message controllers. | [Controller README](./src/main/java/com/cluster/coordinator/controller/README.md) |
+| `service` | Core business logic, scheduling, and job lifecycle. | [Service README](./src/main/java/com/cluster/coordinator/service/README.md) |
+| `service/partitioner` | Strategy for splitting Jobs into Tasks. | [Partitioner README](./src/main/java/com/cluster/coordinator/service/partitioner/README.md) |
+| `websocket` | STOMP session handlers and authentication. | [WebSocket README](./src/main/java/com/cluster/coordinator/websocket/README.md) |

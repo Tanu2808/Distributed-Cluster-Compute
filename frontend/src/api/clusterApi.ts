@@ -1,5 +1,5 @@
-import { apiGet } from './client';
-import type { ClusterSummary } from '../types';
+import { apiGet } from "./client";
+import type { ClusterSummary } from "../types";
 
 /**
  * GET /api/cluster
@@ -7,7 +7,7 @@ import type { ClusterSummary } from '../types';
  * and coordinator/worker status.
  */
 export function fetchClusterSummary(): Promise<ClusterSummary> {
-  return apiGet<ClusterSummary>('/api/cluster');
+  return apiGet<ClusterSummary>("/api/cluster");
 }
 
 /**
@@ -16,5 +16,5 @@ export function fetchClusterSummary(): Promise<ClusterSummary> {
  * Subset of ClusterSummary — useful for high-frequency resource polling.
  */
 export function fetchClusterResources(): Promise<ClusterSummary> {
-  return apiGet<ClusterSummary>('/api/cluster/resources');
+  return apiGet<ClusterSummary>("/api/cluster/resources");
 }

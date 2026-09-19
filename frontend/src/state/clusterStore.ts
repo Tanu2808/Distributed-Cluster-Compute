@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { ConnectionStatus, WsMessage } from '../types/api';
+import { create } from "zustand";
+import type { ConnectionStatus, WsMessage } from "../types/api";
 
 // ─── Store Shape ──────────────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ interface ClusterStoreState {
  * This store is the signal that triggers React Query invalidations.
  */
 export const useClusterStore = create<ClusterStoreState>((set) => ({
-  connectionStatus: 'DISCONNECTED',
+  connectionStatus: "DISCONNECTED",
   lastWsEvent: null,
 
   setConnectionStatus: (status) => set({ connectionStatus: status }),

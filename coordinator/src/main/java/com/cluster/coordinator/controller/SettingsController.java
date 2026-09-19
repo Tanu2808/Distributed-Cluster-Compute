@@ -1,10 +1,9 @@
 package com.cluster.coordinator.controller;
 
 import com.cluster.coordinator.service.SettingsService;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/settings")

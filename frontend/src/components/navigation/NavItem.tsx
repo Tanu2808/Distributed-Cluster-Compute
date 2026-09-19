@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import type { LucideIcon } from 'lucide-react';
+import { NavLink } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 
 interface NavItemProps {
   to: string;
@@ -8,12 +8,17 @@ interface NavItemProps {
   collapsed?: boolean;
 }
 
-export function NavItem({ to, icon: Icon, label, collapsed = false }: NavItemProps) {
+export function NavItem({
+  to,
+  icon: Icon,
+  label,
+  collapsed = false,
+}: NavItemProps) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `nav-item ${isActive ? 'nav-item-active' : ''} ${collapsed ? 'justify-center' : ''}`
+        `nav-item ${isActive ? "nav-item-active" : ""} ${collapsed ? "justify-center" : ""}`
       }
       title={collapsed ? label : undefined}
     >

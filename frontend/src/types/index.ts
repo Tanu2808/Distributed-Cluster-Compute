@@ -1,6 +1,12 @@
 // ─── Worker / Node Types ───────────────────────────────────────────────────
 
-export type WorkerStatus = 'ONLINE' | 'BUSY' | 'OFFLINE' | 'UNHEALTHY' | 'REGISTERING' | 'HEARTBEAT_TIMEOUT';
+export type WorkerStatus =
+  | "ONLINE"
+  | "BUSY"
+  | "OFFLINE"
+  | "UNHEALTHY"
+  | "REGISTERING"
+  | "HEARTBEAT_TIMEOUT";
 
 export interface CpuInfo {
   model: string;
@@ -47,7 +53,7 @@ export interface Worker {
   state: WorkerStatus;
   lastHeartbeat: string;
   connectedSince: string;
-  
+
   cpuCores: number;
   memoryRamMb: number;
   gpuCount: number;
@@ -61,11 +67,11 @@ export interface Worker {
 
 // ─── Cluster / Aggregated Types ─────────────────────────────────────────────
 
-export type ClusterStatus = 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE';
+export type ClusterStatus = "HEALTHY" | "DEGRADED" | "CRITICAL" | "OFFLINE";
 
 export interface ClusterSummary {
   status: ClusterStatus;
-  coordinatorStatus: 'RUNNING' | 'STOPPED' | 'DEGRADED';
+  coordinatorStatus: "RUNNING" | "STOPPED" | "DEGRADED";
   totalWorkers: number;
   connectedWorkers: number;
   activeWorkers: number;
@@ -113,16 +119,16 @@ export interface ClusterChartData {
 // ─── Events ─────────────────────────────────────────────────────────────────
 
 export type EventType =
-  | 'WORKER_CONNECTED'
-  | 'WORKER_DISCONNECTED'
-  | 'RESOURCE_CHANGED'
-  | 'COORDINATOR_STARTED'
-  | 'HEARTBEAT_LOST'
-  | 'CONFIG_CHANGED'
-  | 'WORKER_UNHEALTHY'
-  | 'WORKER_RECOVERED';
+  | "WORKER_CONNECTED"
+  | "WORKER_DISCONNECTED"
+  | "RESOURCE_CHANGED"
+  | "COORDINATOR_STARTED"
+  | "HEARTBEAT_LOST"
+  | "CONFIG_CHANGED"
+  | "WORKER_UNHEALTHY"
+  | "WORKER_RECOVERED";
 
-export type EventSeverity = 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+export type EventSeverity = "INFO" | "WARNING" | "ERROR" | "SUCCESS";
 
 export interface ClusterEvent {
   id: string;
@@ -142,8 +148,8 @@ export interface CoordinatorSettings {
   clusterName: string;
 }
 
-export type RegistrationMode = 'OPEN' | 'TOKEN' | 'CERTIFICATE';
-export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+export type RegistrationMode = "OPEN" | "TOKEN" | "CERTIFICATE";
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
 
 export interface WorkerRegistrationSettings {
   registrationMode: RegistrationMode;

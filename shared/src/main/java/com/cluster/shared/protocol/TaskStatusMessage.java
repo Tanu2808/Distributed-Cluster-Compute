@@ -18,9 +18,7 @@ public class TaskStatusMessage {
     private String jobId;
     private Integer partitionId;
 
-    /**
-     * Backward-compatible constructor for non-partitioned task status.
-     */
+    /** Backward-compatible constructor for non-partitioned task status. */
     public TaskStatusMessage(String taskId, String state, String message) {
         this.taskId = taskId;
         this.state = state;
