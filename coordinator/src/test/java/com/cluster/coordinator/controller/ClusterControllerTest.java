@@ -14,12 +14,14 @@ import static org.mockito.Mockito.*;
 public class ClusterControllerTest {
 
     private ClusterEnrollmentService enrollmentService;
+    private com.cluster.coordinator.service.WorkerService workerService;
     private ClusterController clusterController;
 
     @BeforeEach
     public void setup() {
         enrollmentService = mock(ClusterEnrollmentService.class);
-        clusterController = new ClusterController(enrollmentService);
+        workerService = mock(com.cluster.coordinator.service.WorkerService.class);
+        clusterController = new ClusterController(enrollmentService, workerService);
     }
 
     @Test

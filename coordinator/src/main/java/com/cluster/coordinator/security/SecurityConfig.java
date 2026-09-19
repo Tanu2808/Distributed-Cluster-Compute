@@ -29,7 +29,7 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/actuator/health", "/actuator/info", "/ws/cluster", "/api/cluster/enroll").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info", "/ws/cluster", "/api/cluster/enroll", "/api/cluster/workers").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authProvider)
