@@ -9,6 +9,11 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+/**
+ * Raw STOMP WebSocket handler managing active sessions with Worker Agents.
+ * Maintains a thread-safe list of active connections and provides broadcasting capabilities
+ * for pushing cluster events to all connected clients.
+ */
 @Component
 public class ClusterWebSocketHandler extends TextWebSocketHandler {
 

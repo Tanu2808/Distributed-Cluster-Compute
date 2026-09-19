@@ -16,6 +16,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+/**
+ * Core business service responsible for the end-to-end lifecycle of distributed Jobs.
+ * Handles job validation, persisting initial states, invoking the appropriate {@link com.cluster.coordinator.service.partitioner.JobPartitioner}
+ * to split the job into executable Tasks, and queuing the Job for execution by the {@link SchedulerService}.
+ */
 @Service
 public class JobService {
 

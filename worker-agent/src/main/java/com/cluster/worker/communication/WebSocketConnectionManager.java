@@ -23,6 +23,11 @@ import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+/**
+ * Manages the resilient WebSocket STOMP connection from the Worker Agent to the Coordinator.
+ * Handles authentication, asynchronous connection establishment, automatic retries with backoff,
+ * and lifecycle callback execution (onConnect, onDisconnect).
+ */
 @Component
 public class WebSocketConnectionManager {
 

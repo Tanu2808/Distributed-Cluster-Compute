@@ -4,6 +4,10 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service registry that maps incoming task types to their corresponding {@link TaskHandler} implementations.
+ * Enables dynamic dispatch of distributed tasks to the appropriate physical execution logic.
+ */
 @Service
 public class TaskHandlerRegistry {
 

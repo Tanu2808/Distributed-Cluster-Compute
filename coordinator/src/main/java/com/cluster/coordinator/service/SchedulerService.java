@@ -20,6 +20,12 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Periodic scheduling service responsible for evaluating unassigned Tasks and matching them
+ * with eligible online Workers based on resource availability (CPU and Memory).
+ * Utilizes {@link ResourceReservationService} to track allocations and dispatches assignments
+ * via STOMP messages.
+ */
 @Service
 public class SchedulerService {
 
