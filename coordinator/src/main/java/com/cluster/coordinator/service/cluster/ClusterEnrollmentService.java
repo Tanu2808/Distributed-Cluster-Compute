@@ -19,21 +19,15 @@ public class ClusterEnrollmentService {
 
     private final ClusterSettingsRepository settingsRepository;
     private final com.cluster.coordinator.repository.WorkerRepository workerRepository;
-
-    @Value("${server.port:8080}")
-    private String serverPort;
-
-    @Value("${cluster.coordinator.advertised-host:#{null}}")
-    private String advertisedHost;
-
-    @Value("${cluster.coordinator.advertised-url:#{null}}")
-    private String advertisedUrl;
+    private final CoordinatorEndpointProvider endpointProvider;
 
     public ClusterEnrollmentService(
             ClusterSettingsRepository settingsRepository,
-            com.cluster.coordinator.repository.WorkerRepository workerRepository) {
+            com.cluster.coordinator.repository.WorkerRepository workerRepository,
+            CoordinatorEndpointProvider endpointProvider) {
         this.settingsRepository = settingsRepository;
         this.workerRepository = workerRepository;
+        this.endpointProvider = endpointProvider;
     }
 
     /** Gets the current join code. If one does not exist, it generates and persists a new one. */
@@ -131,35 +125,10 @@ public class ClusterEnrollmentService {
     }
 
     /**
-     * Resolves the Coordinator URL advertised to workers during enrollment. Uses configured
-     * advertised-url if available. Otherwise, constructs the URL using advertised-host (or
-     * automatically detects the local LAN IP if omitted) and server.port.
+     * Resolves the Coordinator URL advertised to workers during enrollment.
      */
     private String resolveCoordinatorUrl() {
-        if (advertisedUrl != null && !advertisedUrl.isBlank()) {
-            String url = advertisedUrl.trim();
-            if (url.endsWith("/")) {
-                url = url.substring(0, url.length() - 1);
-            }
-            return url;
-        }
-
-        String host =
-                (advertisedHost != null && !advertisedHost.isBlank())
-                        ? advertisedHost.trim()
-                        : getLocalIpAddress();
-        
-        String port = (serverPort != null && !serverPort.isBlank()) ? serverPort : "8080";
-        return "http://" + host + ":" + port;
-    }
-
-    private String getLocalIpAddress() {
-        try {
-            return java.net.InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            log.warn("Could not determine local IP address, falling back to 127.0.0.1", e);
-            return "127.0.0.1";
-        }
+        return endpointProvider.getBaseUrl();
     }
 
     /**
