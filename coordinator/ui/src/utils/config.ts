@@ -7,11 +7,11 @@ export const config = {
 
   /** Base URL for the Spring Boot Coordinator REST API */
   API_BASE_URL:
-    (import.meta.env.VITE_API_BASE_URL as string) || "http://localhost:8080",
+    (import.meta.env.VITE_API_BASE_URL as string) || (import.meta.env.DEV ? "http://localhost:8080" : ""),
 
   /** WebSocket URL for real-time cluster events */
   WS_URL:
-    (import.meta.env.VITE_WS_URL as string) || "ws://localhost:8080/ws/cluster",
+    (import.meta.env.VITE_WS_URL as string) || (import.meta.env.DEV ? "ws://localhost:8080/ws/cluster" : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/cluster`),
 
   /**
    * Optional REST polling interval (ms) as fallback when WebSocket is unavailable.
