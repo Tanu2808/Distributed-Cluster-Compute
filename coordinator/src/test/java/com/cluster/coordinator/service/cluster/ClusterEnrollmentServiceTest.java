@@ -251,18 +251,38 @@ public class ClusterEnrollmentServiceTest {
         assertEquals("http://192.168.1.100:8080", result.getCoordinatorUrl());
     }
 
-    /** When advertisedUrl is null or blank, fallback to localhost with serverPort. */
+    /** When advertisedUrl is null, fallback to advertisedHost. */
     @Test
-    public void testEnrollWorker_AdvertisedUrlNull_FallsBackToLocalhostWithServerPort() {
+    public void testEnrollWorker_AdvertisedUrlNull_FallsBackToAdvertisedHost() {
         stubStoredCode(STORED_CODE);
         when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
         ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", null);
+        ReflectionTestUtils.setField(enrollmentService, "advertisedHost", "192.168.1.100");
         ReflectionTestUtils.setField(enrollmentService, "serverPort", "9090");
 
         ClusterEnrollmentService.EnrollmentResult result =
                 enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
 
         assertTrue(result.isSuccess());
-        assertEquals("http://localhost:9090", result.getCoordinatorUrl());
+        assertEquals("http://192.168.1.100:9090", result.getCoordinatorUrl());
+    }
+
+    /** When advertisedHost is also null, fallback to local IP. */
+    @Test
+    public void testEnrollWorker_AdvertisedHostNull_FallsBackToLocalIp() {
+        stubStoredCode(STORED_CODE);
+        when(workerRepository.findById("worker-123")).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(enrollmentService, "advertisedUrl", null);
+        ReflectionTestUtils.setField(enrollmentService, "advertisedHost", null);
+        ReflectionTestUtils.setField(enrollmentService, "serverPort", "9090");
+
+        ClusterEnrollmentService.EnrollmentResult result =
+                enrollmentService.enrollWorker("AAAA-BBBB-CCCC-DDDD", "worker-123");
+
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getCoordinatorUrl());
+        assertTrue(result.getCoordinatorUrl().startsWith("http://"));
+        assertTrue(result.getCoordinatorUrl().endsWith(":9090"));
+        assertFalse(result.getCoordinatorUrl().contains("localhost"));
     }
 }

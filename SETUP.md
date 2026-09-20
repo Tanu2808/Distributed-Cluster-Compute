@@ -57,6 +57,17 @@ java -jar coordinator-0.0.1-SNAPSHOT.jar
 Once running, the Coordinator will be available at:
 - UI Dashboard: `http://localhost:8080` (or `http://localhost:5173` if running the Vite dev server separately).
 
+### Changing the Coordinator Port
+If port `8080` is already in use, you can easily change the port by passing the `--server.port` argument:
+```bash
+# Using Maven (Wrap the -D argument in quotes if using PowerShell on Windows)
+mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8082"
+
+# Using the packaged JAR
+java -jar coordinator-0.0.1-SNAPSHOT.jar --server.port=8082
+```
+*Note: If you change the Coordinator's port, remember to also update the Worker's configuration to connect to the new port (e.g., `--cluster.coordinator.url=http://<COORDINATOR_IP>:8082`).*
+
 ---
 
 ## 3. Running the Worker Agent (On Other Systems)

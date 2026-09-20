@@ -11,7 +11,7 @@ server:
 
 cluster:
   coordinator:
-    advertised-url: ${COORDINATOR_ADVERTISED_URL:http://localhost:${server.port:8080}}
+    advertised-host: ${COORDINATOR_ADVERTISED_HOST:}
 
 management:
   endpoints:

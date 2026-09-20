@@ -76,10 +76,7 @@ public class ClusterSetupService {
                 var storedConfig = configStore.getConfig();
                 storedConfig.setClusterName(clusterId);
                 storedConfig.setClusterId(clusterId);
-                storedConfig.setCoordinatorUrl(
-                        returnedCoordinatorUrl != null
-                                ? returnedCoordinatorUrl
-                                : baseUrl);
+                storedConfig.setCoordinatorUrl(baseUrl);
 
                 if (runtimeCredential != null) {
                     storedConfig.setEnrollmentCredential(runtimeCredential);

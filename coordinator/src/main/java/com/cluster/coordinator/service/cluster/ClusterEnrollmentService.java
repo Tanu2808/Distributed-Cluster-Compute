@@ -23,7 +23,10 @@ public class ClusterEnrollmentService {
     @Value("${server.port:8080}")
     private String serverPort;
 
-    @Value("${cluster.coordinator.advertised-url:http://localhost:${server.port:8080}}")
+    @Value("${cluster.coordinator.advertised-host:#{null}}")
+    private String advertisedHost;
+
+    @Value("${cluster.coordinator.advertised-url:#{null}}")
     private String advertisedUrl;
 
     public ClusterEnrollmentService(
@@ -129,21 +132,34 @@ public class ClusterEnrollmentService {
 
     /**
      * Resolves the Coordinator URL advertised to workers during enrollment. Uses configured
-     * advertised-url, falling back to http://localhost:{server.port}, and strips any trailing slash
-     * to ensure clean URL concatenation.
+     * advertised-url if available. Otherwise, constructs the URL using advertised-host (or
+     * automatically detects the local LAN IP if omitted) and server.port.
      */
     private String resolveCoordinatorUrl() {
-        String url =
-                (advertisedUrl != null && !advertisedUrl.isBlank())
-                        ? advertisedUrl.trim()
-                        : "http://localhost:"
-                                + (serverPort != null && !serverPort.isBlank()
-                                        ? serverPort
-                                        : "8080");
-        if (url.endsWith("/")) {
-            url = url.substring(0, url.length() - 1);
+        if (advertisedUrl != null && !advertisedUrl.isBlank()) {
+            String url = advertisedUrl.trim();
+            if (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+            return url;
         }
-        return url;
+
+        String host =
+                (advertisedHost != null && !advertisedHost.isBlank())
+                        ? advertisedHost.trim()
+                        : getLocalIpAddress();
+        
+        String port = (serverPort != null && !serverPort.isBlank()) ? serverPort : "8080";
+        return "http://" + host + ":" + port;
+    }
+
+    private String getLocalIpAddress() {
+        try {
+            return java.net.InetAddress.getLocalHost().getHostAddress();
+        } catch (Exception e) {
+            log.warn("Could not determine local IP address, falling back to 127.0.0.1", e);
+            return "127.0.0.1";
+        }
     }
 
     /**

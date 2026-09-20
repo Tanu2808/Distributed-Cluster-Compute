@@ -58,7 +58,8 @@ class ClusterSetupServiceTest {
 
     @Test
     void testConnectToCoordinatorSuccess_TransitionsProperly() {
-        when(configStore.getConfig()).thenReturn(new WorkerConfiguration("worker-1"));
+        WorkerConfiguration mockConfig = new WorkerConfiguration("worker-1");
+        when(configStore.getConfig()).thenReturn(mockConfig);
 
         try (MockedConstruction<RestTemplate> mocked =
                 mockConstruction(
@@ -71,12 +72,15 @@ class ClusterSetupServiceTest {
                                                             "clusterId",
                                                             "test-cluster-id",
                                                             "coordinatorUrl",
-                                                            "http://localhost:8080")));
+                                                            "http://localhost:8080"))); // Coordinator mistakenly returns localhost
                         })) {
 
-            ClusterEnrollment enrollment = setupService.connectToCoordinator("http://localhost:8080?token=ABCD");
+            ClusterEnrollment enrollment = setupService.connectToCoordinator("http://192.168.1.103:8080?token=ABCD");
 
             assertEquals(ClusterEnrollment.Status.SUCCESS, enrollment.getStatus());
+            
+            // Should persist the actual base URL used, NOT the one returned by the coordinator
+            assertEquals("http://192.168.1.103:8080", mockConfig.getCoordinatorUrl());
 
             InOrder inOrder = inOrder(configStore, stateManager, lifecycleService);
             inOrder.verify(configStore).save();
