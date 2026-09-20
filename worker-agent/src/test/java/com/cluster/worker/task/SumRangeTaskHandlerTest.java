@@ -247,7 +247,7 @@ class SumRangeTaskHandlerTest {
 
     @Test
     void testCancellationDuringExecution() throws Exception {
-        WorkerTask task = createTask(1, 10_000_000);
+        WorkerTask task = createTask(1, 100_000_000L);
         AtomicBoolean cancelledDuringRun = new AtomicBoolean(false);
 
         Thread workerThread =

@@ -1,5 +1,9 @@
 package com.cluster.coordinator.controller;
 
+import com.cluster.coordinator.dto.ClusterResourcesResponse;
+import com.cluster.coordinator.model.ClusterEvent;
+import com.cluster.coordinator.service.ClusterService;
+import com.cluster.coordinator.service.EventService;
 import com.cluster.coordinator.service.WorkerService;
 import com.cluster.coordinator.service.cluster.ClusterEnrollmentService;
 import java.util.List;
@@ -19,11 +23,15 @@ public class ClusterController {
 
     private final ClusterEnrollmentService enrollmentService;
     private final WorkerService workerService;
+    private final EventService eventService;
+    private final ClusterService clusterService;
 
     public ClusterController(
-            ClusterEnrollmentService enrollmentService, WorkerService workerService) {
+            ClusterEnrollmentService enrollmentService, WorkerService workerService, EventService eventService, ClusterService clusterService) {
         this.enrollmentService = enrollmentService;
         this.workerService = workerService;
+        this.eventService = eventService;
+        this.clusterService = clusterService;
     }
 
     /**
@@ -43,6 +51,15 @@ public class ClusterController {
     @PostMapping("/join-code/rotate")
     public ResponseEntity<Map<String, String>> rotateJoinCode() {
         return ResponseEntity.ok(Map.of("joinCode", enrollmentService.rotateJoinCode()));
+    }
+
+    /**
+     * Retrieves a full enrollment URL for workers to connect to this coordinator automatically.
+     * @return A map containing the active enrollment link.
+     */
+    @GetMapping("/enrollment-link")
+    public ResponseEntity<Map<String, String>> getEnrollmentLink() {
+        return ResponseEntity.ok(Map.of("enrollmentLink", enrollmentService.getEnrollmentLink()));
     }
 
     /**
@@ -94,5 +111,15 @@ public class ClusterController {
                         .collect(Collectors.toList());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/events")
+    public ResponseEntity<List<ClusterEvent>> getRecentEvents() {
+        return ResponseEntity.ok(eventService.getRecentEvents());
+    }
+
+    @GetMapping("/resources")
+    public ResponseEntity<ClusterResourcesResponse> getClusterResources() {
+        return ResponseEntity.ok(clusterService.getAggregateResources());
     }
 }

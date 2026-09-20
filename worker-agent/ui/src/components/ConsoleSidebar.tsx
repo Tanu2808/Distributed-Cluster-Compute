@@ -20,6 +20,7 @@ export const ConsoleSidebar: React.FC<ConsoleSidebarProps> = ({ status }) => {
   const navItems = [
     { to: "/home", icon: LayoutDashboard, label: "Overview" },
     { to: "/tasks", icon: ListCheck, label: "Tasks" },
+    { to: "/submit", icon: Network, label: "Submit Job" },
     { to: "/node", icon: Cpu, label: "Node Hardware" },
     { to: "/connection", icon: Network, label: "Connection" },
     { to: "/settings", icon: Settings, label: "Settings" },

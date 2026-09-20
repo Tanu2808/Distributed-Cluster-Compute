@@ -1,7 +1,7 @@
 # Coordinator REST API Controllers
 
 ## Purpose
-The `controller` package defines the external REST API boundary for the Coordinator. It handles HTTP requests from the Coordinator Dashboard (`frontend/`) and local worker agents, routing them to the underlying business logic in the `service` layer.
+The `controller` package defines the external REST API boundary for the Coordinator. It handles HTTP requests from the Coordinator Dashboard (`coordinator/ui`) and local worker agents, routing them to the underlying business logic in the `service` layer.
 
 ## Responsibilities
 - Exposing endpoints for cluster metrics, worker enrollment, and job submission.

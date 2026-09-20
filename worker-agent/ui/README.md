@@ -12,8 +12,8 @@ The Worker Agent Dashboard is a localized React 18 UI embedded directly into eac
 - `/` (Home): High-level overview of the local worker.
 - `/connection` (Connection): Detailed diagnostics on STOMP connection state, retry backoff metrics, and ping latency to the Coordinator.
 - `/node` (Node): Real-time view of local CPU, RAM, and disk utilization monitored by OSHI.
-- `/tasks` (Tasks): Real-time view of Tasks currently executing on this specific worker.
-- `/setup` (Setup): Configuration flow if the agent lacks registration credentials.
+- ``/tasks`` (Tasks): Real-time view of Tasks currently executing on this specific worker.
+- ``/setup`` (Setup): Connects the agent to a Coordinator using an Enrollment Link URL.
 - `/settings` (Settings): Local node configuration values.
 
 ## State Management
@@ -28,8 +28,4 @@ Global UI state is managed via **Zustand** in `clusterStore.ts`, caching local w
 | `src/state/clusterStore.ts` | Global state for local node capabilities. |
 
 ## Development
-To run the UI in standalone development mode (assuming the local Worker Agent is running on port 8081):
-```bash
-npm install
-npm run dev
-```
+The UI is built and served automatically by the Spring Boot application (at `http://localhost:8081`). No separate frontend dev server is required.

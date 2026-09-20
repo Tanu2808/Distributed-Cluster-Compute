@@ -5,6 +5,7 @@ import Setup from "./pages/Setup";
 import Node from "./pages/Node";
 import Tasks from "./pages/Tasks";
 import Connection from "./pages/Connection";
+import SubmitJob from "./pages/SubmitJob";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Route path="node" element={<Node />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="connection" element={<Connection />} />
+        <Route path="submit" element={<SubmitJob />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

@@ -44,6 +44,11 @@
             <artifactId>shared</artifactId>
             <version>0.0.1-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.onnxruntime</groupId>
+            <artifactId>onnxruntime</artifactId>
+            <version>1.17.1</version>
+        </dependency>
     </dependencies>
 
     <build>

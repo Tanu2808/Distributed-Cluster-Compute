@@ -26,14 +26,14 @@ The platform operates as a distributed system with a central control plane and m
 ```
 
 The system features dual frontends targeting different scopes:
-- **`frontend/` (Coordinator Dashboard)**: The cluster-wide UI showing aggregated resources, job status, and overall health.
+- **`coordinator/ui/` (Coordinator Dashboard)**: The cluster-wide UI showing aggregated resources, job status, and overall health.
 - **`worker-agent/ui/` (Worker Agent Dashboard)**: A local node dashboard for monitoring individual worker connectivity, system metrics, and execution diagnostics.
 
 ## Core Modules
 - **[Coordinator](./coordinator/README.md)**: The control plane orchestrating worker registration, resource aggregation, and job scheduling.
 - **[Worker Agent](./worker-agent/README.md)**: A lightweight daemon running on compute nodes to supply physical hardware resources and execute tasks.
 - **[Shared](./shared/README.md)**: A Java library containing cross-cutting domain models, STOMP message envelopes, and protocol types to guarantee strict type safety over network boundaries.
-- **[Frontend](./frontend/README.md)**: A React/Vite dashboard connecting to the Coordinator's REST/STOMP interfaces.
+- **[Coordinator UI](./coordinator/ui/README.md)**: An embedded React/Vite dashboard connecting to the Coordinator's REST/STOMP interfaces.
 - **[Worker Agent UI](./worker-agent/ui/README.md)**: An embedded React/Vite UI served locally by each Worker Agent.
 
 ## System Communication
@@ -105,20 +105,9 @@ cd worker-agent
 mvn spring-boot:run
 ```
 
-### 4. Start Coordinator Frontend (Dev Mode)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 5. Start Worker Agent UI (Dev Mode)
-```bash
-cd worker-agent/ui
-npm install
-npm run dev
-```
-
+### 4. Access UIs
+- The **Coordinator UI** is served automatically at `http://localhost:8080`.
+- The **Worker UI** is served automatically at `http://localhost:8081` (or whatever port the worker is running on).
 ## Documentation Hierarchy
 - [Coordinator](./coordinator/README.md)
   - [Controller API](./coordinator/src/main/java/com/cluster/coordinator/controller/README.md)
@@ -132,5 +121,5 @@ npm run dev
   - [Hardware Monitoring](./worker-agent/src/main/java/com/cluster/worker/monitoring/README.md)
   - [Task Management](./worker-agent/src/main/java/com/cluster/worker/task/README.md)
 - [Shared Protocol](./shared/README.md)
-- [Cluster Dashboard (Frontend)](./frontend/README.md)
+- [Cluster Dashboard (Coordinator UI)](./coordinator/ui/README.md)
 - [Worker Agent UI](./worker-agent/ui/README.md)

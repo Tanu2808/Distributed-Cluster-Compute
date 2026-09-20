@@ -273,6 +273,37 @@ public class TaskExecutionService {
                             }
                             job.setFinalResult(String.valueOf(totalSum));
                         }
+                    } else if (job.getFinalResult() == null && "ML_INFERENCE".equals(job.getTaskType())) {
+                        java.util.List<TaskResult> results =
+                                taskResultRepository.findByJobId(job.getId());
+                        long successfulResults =
+                                results.stream()
+                                        .filter(r -> "COMPLETED".equals(r.getStatus()))
+                                        .count();
+                        if (successfulResults == job.getTotalPartitions()) {
+                            try {
+                                com.fasterxml.jackson.databind.node.ArrayNode finalArray = objectMapper.createArrayNode();
+                                // sort results by partitionId to maintain order
+                                results.stream()
+                                    .filter(r -> "COMPLETED".equals(r.getStatus()))
+                                    .sorted(java.util.Comparator.comparingInt(TaskResult::getPartitionId))
+                                    .forEach(r -> {
+                                        try {
+                                            com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(r.getOutput());
+                                            if (node.isArray()) {
+                                                finalArray.addAll((com.fasterxml.jackson.databind.node.ArrayNode) node);
+                                            } else {
+                                                finalArray.add(node);
+                                            }
+                                        } catch (Exception e) {
+                                            log.error("Failed to parse ML_INFERENCE partition result: {}", r.getOutput(), e);
+                                        }
+                                    });
+                                job.setFinalResult(objectMapper.writeValueAsString(finalArray));
+                            } catch (Exception e) {
+                                log.error("Failed to aggregate ML_INFERENCE results", e);
+                            }
+                        }
                     }
                     job.setState(JobState.COMPLETED);
                     log.info("Job {} fully completed", job.getId());

@@ -57,6 +57,12 @@ public class ClusterEnrollmentService {
         return newCode;
     }
 
+    /** Returns the full enrollment URL for a worker to connect automatically. */
+    @Transactional
+    public String getEnrollmentLink() {
+        return resolveCoordinatorUrl() + "?token=" + getJoinCode();
+    }
+
     /**
      * Validates a provided join code and returns the cluster connection information.
      *

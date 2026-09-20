@@ -1,64 +1,28 @@
 package com.cluster.coordinator.dto;
 
 public class ClusterResourcesResponse {
+    private long totalCpu;
+    private long totalMemory;
+    private long totalGpu;
+    private long totalStorage;
+    private long totalNetwork;
 
-    private long totalCpuCores;
-    private long totalMemoryRamMb;
-    private long totalGpuCount;
-    private long totalStorageMb;
-    private long totalNetworkBps;
-
-    public ClusterResourcesResponse(
-            long totalCpuCores,
-            long totalMemoryRamMb,
-            long totalGpuCount,
-            long totalStorageMb,
-            long totalNetworkBps) {
-        this.totalCpuCores = totalCpuCores;
-        this.totalMemoryRamMb = totalMemoryRamMb;
-        this.totalGpuCount = totalGpuCount;
-        this.totalStorageMb = totalStorageMb;
-        this.totalNetworkBps = totalNetworkBps;
+    public ClusterResourcesResponse(long totalCpu, long totalMemory, long totalGpu, long totalStorage, long totalNetwork) {
+        this.totalCpu = totalCpu;
+        this.totalMemory = totalMemory;
+        this.totalGpu = totalGpu;
+        this.totalStorage = totalStorage;
+        this.totalNetwork = totalNetwork;
     }
 
-    // Getters and Setters
-    public long getTotalCpuCores() {
-        return totalCpuCores;
-    }
-
-    public void setTotalCpuCores(long totalCpuCores) {
-        this.totalCpuCores = totalCpuCores;
-    }
-
-    public long getTotalMemoryRamMb() {
-        return totalMemoryRamMb;
-    }
-
-    public void setTotalMemoryRamMb(long totalMemoryRamMb) {
-        this.totalMemoryRamMb = totalMemoryRamMb;
-    }
-
-    public long getTotalGpuCount() {
-        return totalGpuCount;
-    }
-
-    public void setTotalGpuCount(long totalGpuCount) {
-        this.totalGpuCount = totalGpuCount;
-    }
-
-    public long getTotalStorageMb() {
-        return totalStorageMb;
-    }
-
-    public void setTotalStorageMb(long totalStorageMb) {
-        this.totalStorageMb = totalStorageMb;
-    }
-
-    public long getTotalNetworkBps() {
-        return totalNetworkBps;
-    }
-
-    public void setTotalNetworkBps(long totalNetworkBps) {
-        this.totalNetworkBps = totalNetworkBps;
-    }
+    public long getTotalCpu() { return totalCpu; }
+    public void setTotalCpu(long totalCpu) { this.totalCpu = totalCpu; }
+    public long getTotalMemory() { return totalMemory; }
+    public void setTotalMemory(long totalMemory) { this.totalMemory = totalMemory; }
+    public long getTotalGpu() { return totalGpu; }
+    public void setTotalGpu(long totalGpu) { this.totalGpu = totalGpu; }
+    public long getTotalStorage() { return totalStorage; }
+    public void setTotalStorage(long totalStorage) { this.totalStorage = totalStorage; }
+    public long getTotalNetwork() { return totalNetwork; }
+    public void setTotalNetwork(long totalNetwork) { this.totalNetwork = totalNetwork; }
 }
