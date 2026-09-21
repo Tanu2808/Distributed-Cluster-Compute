@@ -7,11 +7,12 @@ spring:
     open-in-view: false
 
 server:
-  port: 8080
+  port: 0
+  address: 0.0.0.0
 
 cluster:
   coordinator:
-    advertised-url: ${COORDINATOR_ADVERTISED_URL:http://localhost:${server.port:8080}}
+    advertised-host: ${COORDINATOR_ADVERTISED_HOST:}
 
 management:
   endpoints:

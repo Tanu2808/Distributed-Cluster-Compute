@@ -3,6 +3,8 @@ package com.cluster.coordinator.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+import com.cluster.coordinator.service.ClusterService;
+import com.cluster.coordinator.service.EventService;
 import com.cluster.coordinator.service.cluster.ClusterEnrollmentService;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,13 +16,17 @@ public class ClusterControllerTest {
 
     private ClusterEnrollmentService enrollmentService;
     private com.cluster.coordinator.service.WorkerService workerService;
+    private EventService eventService;
+    private ClusterService clusterService;
     private ClusterController clusterController;
 
     @BeforeEach
     public void setup() {
         enrollmentService = mock(ClusterEnrollmentService.class);
         workerService = mock(com.cluster.coordinator.service.WorkerService.class);
-        clusterController = new ClusterController(enrollmentService, workerService);
+        eventService = mock(EventService.class);
+        clusterService = mock(ClusterService.class);
+        clusterController = new ClusterController(enrollmentService, workerService, eventService, clusterService);
     }
 
     @Test

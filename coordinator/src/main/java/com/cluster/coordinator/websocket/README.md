@@ -6,7 +6,7 @@ The `websocket` package manages the persistent STOMP communication channel betwe
 ## Responsibilities
 - Establishing and authenticating incoming WebSocket HTTP upgrades.
 - Maintaining a thread-safe registry of active `WebSocketSession`s.
-- Broadcasting cluster events to the Coordinator Dashboard (`frontend/`).
+- Broadcasting cluster events to the Coordinator Dashboard (`coordinator/ui`).
 
 ## Architecture / Flow
 1. A Worker Agent attempts an HTTP upgrade to `/ws/coordinator`.

@@ -26,14 +26,14 @@ The platform operates as a distributed system with a central control plane and m
 ```
 
 The system features dual frontends targeting different scopes:
-- **`frontend/` (Coordinator Dashboard)**: The cluster-wide UI showing aggregated resources, job status, and overall health.
+- **`coordinator/ui/` (Coordinator Dashboard)**: The cluster-wide UI showing aggregated resources, job status, and overall health.
 - **`worker-agent/ui/` (Worker Agent Dashboard)**: A local node dashboard for monitoring individual worker connectivity, system metrics, and execution diagnostics.
 
 ## Core Modules
 - **[Coordinator](./coordinator/README.md)**: The control plane orchestrating worker registration, resource aggregation, and job scheduling.
 - **[Worker Agent](./worker-agent/README.md)**: A lightweight daemon running on compute nodes to supply physical hardware resources and execute tasks.
 - **[Shared](./shared/README.md)**: A Java library containing cross-cutting domain models, STOMP message envelopes, and protocol types to guarantee strict type safety over network boundaries.
-- **[Frontend](./frontend/README.md)**: A React/Vite dashboard connecting to the Coordinator's REST/STOMP interfaces.
+- **[Coordinator UI](./coordinator/ui/README.md)**: An embedded React/Vite dashboard connecting to the Coordinator's REST/STOMP interfaces.
 - **[Worker Agent UI](./worker-agent/ui/README.md)**: An embedded React/Vite UI served locally by each Worker Agent.
 
 ## System Communication
@@ -84,40 +84,52 @@ Important REST endpoints exposed by the Coordinator:
 | `GET` | `/api/jobs/{id}` | Poll the status of a Job |
 | `GET` | `/api/jobs/{id}/tasks` | Retrieve partition-level Task statuses |
 
-## Build and Run
+## Operations Guide & Multi-PC Demo Runbook
 
-### 1. Build Backend
-From the root directory, build all Maven modules:
+This guide explains how to run a genuine multi-machine LAN demonstration of the Distributed Cluster Compute platform. The platform is designed to discover your local LAN IPv4 address automatically and assign dynamic available ports, removing any hardcoded `localhost` or `8080` restrictions.
+
+### 1. Build the Entire Project
+From the root directory, build all Maven modules (this compiles both Java and Vite/React frontends):
 ```bash
 mvn clean install -DskipTests
 ```
 
-### 2. Start Coordinator
-```bash
-cd coordinator
-mvn spring-boot:run
-```
+### 2. Prepare the Coordinator (PC A)
+This machine will host the Control Plane and expose the web UI to the LAN.
 
-### 3. Start Worker Agent
-The Worker UI is embedded via Maven and will be served on port `8081` (default).
-```bash
-cd worker-agent
-mvn spring-boot:run
-```
+**On PC A (e.g., Windows):**
+1. **Firewall Configuration (Windows):** You must allow Java to accept inbound connections.
+   - Open **Windows Defender Firewall with Advanced Security**.
+   - Create a **New Inbound Rule** -> **Program** -> Browse to your `java.exe` and `javaw.exe` (inside your JDK `bin/` folder).
+   - Alternatively, create a **Port Rule** for the specific port (but since the port is dynamically assigned by default, allowing the Java executable is easier for testing).
+   - Ensure the rule applies to **Private** networks.
+2. **Start Coordinator:**
+   ```bash
+   cd coordinator
+   mvn spring-boot:run
+   ```
+3. **Verify Startup:** Look at the startup logs. You should see messages indicating the `detected LAN IP` and the dynamically allocated HTTP and WebSocket endpoints (e.g., `192.168.1.x:54321`).
+4. **Open UI:** Open the Coordinator UI in your browser using the URL printed in the logs. Navigate to the **Enrollment** page and copy the Worker Enrollment Link.
 
-### 4. Start Coordinator Frontend (Dev Mode)
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### 3. Prepare the Worker (PC B)
+This machine will provide computing power to the cluster.
 
-### 5. Start Worker Agent UI (Dev Mode)
-```bash
-cd worker-agent/ui
-npm install
-npm run dev
-```
+**On PC B (e.g., Linux/Arch or another Windows PC):**
+1. **Start Worker Agent:**
+   ```bash
+   cd worker-agent
+   mvn spring-boot:run
+   ```
+2. **Connect to Worker UI:** Open the Worker UI on PC B (usually `http://localhost:8081` or the dynamic port printed in the Worker's logs).
+3. **Enroll:** The Worker will initially be in a `SETUP_REQUIRED` state. Paste the Enrollment Link (copied from PC A) into the setup form. The link will look like:
+   `http://<PC-A-LAN-IP>:<ACTUAL-PORT>?token=<TOKEN>`
+4. **Verify Connection:** The Worker will persist the exact base URL of the Coordinator, derive the STOMP WebSocket URL (`ws://.../ws/coordinator`), and transition to `ONLINE`. Check PC A's Coordinator UI; the worker should now appear in the Dashboard.
+
+### 4. Job Submission & Validation
+1. **Submit `SUM_RANGE` Job:** From the Coordinator UI, submit a `SUM_RANGE` job. You will see the job partition into tasks, route to the Worker over WebSockets, compute, and aggregate the result back on the Coordinator.
+2. **Submit `ML_INFERENCE` Job:** Submit an ML job. The Worker will dynamically load the ONNX model from its packaged JAR classpath and execute the inference task without requiring external file paths.
+3. **Scale Up:** Repeat Step 3 on additional physical or virtual machines on the same LAN to build a larger cluster. Submit a sufficiently large workload to observe distributed scheduling across multiple nodes.
+4. **Resilience Test:** Restart the Coordinator or Worker. The Worker's connection manager will gracefully disconnect, begin exponential backoff retries, and reconnect once the Coordinator is available again.
 
 ## Documentation Hierarchy
 - [Coordinator](./coordinator/README.md)
@@ -132,5 +144,5 @@ npm run dev
   - [Hardware Monitoring](./worker-agent/src/main/java/com/cluster/worker/monitoring/README.md)
   - [Task Management](./worker-agent/src/main/java/com/cluster/worker/task/README.md)
 - [Shared Protocol](./shared/README.md)
-- [Cluster Dashboard (Frontend)](./frontend/README.md)
+- [Cluster Dashboard (Coordinator UI)](./coordinator/ui/README.md)
 - [Worker Agent UI](./worker-agent/ui/README.md)

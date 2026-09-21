@@ -1,14 +1,11 @@
 package com.cluster.worker.service.cluster;
 
 import com.cluster.worker.model.WorkerLifecycleState;
-import com.cluster.worker.model.cluster.ClusterConfiguration;
-import com.cluster.worker.model.cluster.ClusterConnectionInfo;
 import com.cluster.worker.model.cluster.ClusterEnrollment;
-import com.cluster.worker.model.cluster.JoinCode;
 import com.cluster.worker.persistence.WorkerConfigurationStore;
 import com.cluster.worker.service.WorkerStateManager;
+import java.net.URI;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -16,38 +13,56 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class ClusterSetupService {
 
-    private final CoordinatorProvisioningService provisioningService;
-    private final CoordinatorConnectionResolver connectionResolver;
     private final WorkerConfigurationStore configStore;
     private final WorkerStateManager stateManager;
     private final com.cluster.worker.service.WorkerLifecycleService lifecycleService;
 
     public ClusterSetupService(
-            CoordinatorProvisioningService provisioningService,
-            CoordinatorConnectionResolver connectionResolver,
             WorkerConfigurationStore configStore,
             WorkerStateManager stateManager,
             @org.springframework.context.annotation.Lazy
                     com.cluster.worker.service.WorkerLifecycleService lifecycleService) {
-        this.provisioningService = provisioningService;
-        this.connectionResolver = connectionResolver;
         this.configStore = configStore;
         this.stateManager = stateManager;
         this.lifecycleService = lifecycleService;
     }
 
-    @Value("${worker.coordinator.url:http://localhost:8080}")
-    private String defaultCoordinatorUrl;
-
-    /** Attempts to join an existing cluster using a join code. */
-    public ClusterEnrollment joinCluster(JoinCode joinCode) {
-        RestTemplate restTemplate = new RestTemplate();
-        String enrollUrl = defaultCoordinatorUrl + "/api/cluster/enroll";
+    /** Attempts to join an existing cluster using a coordinator URL which may contain a token. */
+    public ClusterEnrollment connectToCoordinator(String url) {
+        if (url == null || url.isBlank()) {
+            return new ClusterEnrollment(
+                    configStore.getWorkerId(),
+                    ClusterEnrollment.Status.FAILED,
+                    "Coordinator URL is required.");
+        }
 
         try {
+            URI uri = new URI(url);
+            String baseUrl = uri.getScheme() + "://" + uri.getAuthority();
+            String query = uri.getQuery();
+            String token = null;
+
+            if (query != null) {
+                String[] params = query.split("&");
+                for (String param : params) {
+                    String[] pair = param.split("=");
+                    if (pair.length == 2 && pair[0].equalsIgnoreCase("token")) {
+                        token = pair[1];
+                        break;
+                    }
+                }
+            }
+
+            RestTemplate restTemplate = new RestTemplate();
+            String enrollUrl = baseUrl + "/api/cluster/enroll";
+            
+            // If token is null, we can try without one, or use a dummy.
+            // The existing coordinator expects a joinCode to not be null.
+            String joinCodeToUse = token != null ? token : "";
+
             Map<String, String> requestBody =
                     Map.of(
-                            "joinCode", joinCode.getCode(),
+                            "joinCode", joinCodeToUse,
                             "workerId", configStore.getWorkerId());
             ResponseEntity<Map> response =
                     restTemplate.postForEntity(enrollUrl, requestBody, Map.class);
@@ -61,15 +76,12 @@ public class ClusterSetupService {
                 var storedConfig = configStore.getConfig();
                 storedConfig.setClusterName(clusterId);
                 storedConfig.setClusterId(clusterId);
-                storedConfig.setCoordinatorUrl(
-                        returnedCoordinatorUrl != null
-                                ? returnedCoordinatorUrl
-                                : defaultCoordinatorUrl);
+                storedConfig.setCoordinatorUrl(baseUrl);
 
                 if (runtimeCredential != null) {
                     storedConfig.setEnrollmentCredential(runtimeCredential);
                 } else {
-                    storedConfig.setEnrollmentCredential(joinCode.getCode()); // Fallback
+                    storedConfig.setEnrollmentCredential(joinCodeToUse); // Fallback
                 }
                 configStore.save();
 
@@ -83,12 +95,12 @@ public class ClusterSetupService {
                 return new ClusterEnrollment(
                         configStore.getWorkerId(),
                         ClusterEnrollment.Status.SUCCESS,
-                        "Successfully joined cluster");
+                        "Successfully initiated connection to cluster");
             } else {
                 return new ClusterEnrollment(
                         configStore.getWorkerId(),
                         ClusterEnrollment.Status.FAILED,
-                        "Invalid join code or unauthorized");
+                        "Unauthorized or invalid token");
             }
         } catch (Exception e) {
             return new ClusterEnrollment(
@@ -96,47 +108,5 @@ public class ClusterSetupService {
                     ClusterEnrollment.Status.FAILED,
                     "Coordinator connection failed: " + e.getMessage());
         }
-    }
-
-    /** Attempts to create a new cluster. */
-    public ClusterConfiguration createCluster(String clusterName, boolean isLocal) {
-        if (clusterName == null || clusterName.isBlank()) {
-            throw new IllegalArgumentException("Cluster name is required");
-        }
-
-        ClusterConnectionInfo connectionInfo;
-
-        if (isLocal) {
-            boolean provisioned = provisioningService.provisionLocalCoordinator(clusterName);
-            if (!provisioned) {
-                throw new RuntimeException("Failed to provision local coordinator");
-            }
-            connectionInfo = connectionResolver.resolveLocalCoordinator(clusterName);
-        } else {
-            // For existing server, we'd typically take an endpoint. For now, it's a placeholder.
-            throw new UnsupportedOperationException(
-                    "Creating a cluster on an existing remote coordinator is not fully supported"
-                            + " yet.");
-        }
-
-        // Persist Configuration
-        var storedConfig = configStore.getConfig();
-        storedConfig.setClusterName(clusterName);
-        storedConfig.setClusterId(
-                "local-cluster-id"); // In a real scenario, this comes back from the coordinator
-        storedConfig.setCoordinatorUrl(connectionInfo.getUrl());
-        if (connectionInfo.getJoinCode() != null) {
-            storedConfig.setEnrollmentCredential(connectionInfo.getJoinCode().getCode());
-        }
-        configStore.save();
-
-        // Transition state to kick off the connection flow
-        stateManager.transitionLifecycle(WorkerLifecycleState.LOADING_CONFIGURATION);
-        stateManager.transitionLifecycle(WorkerLifecycleState.CONFIGURED);
-
-        // Invoke existing connection startup mechanism
-        lifecycleService.initiateConnection();
-
-        return new ClusterConfiguration(clusterName, connectionInfo);
     }
 }

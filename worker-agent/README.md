@@ -19,8 +19,8 @@ The Worker Agent state machine (`WorkerStateManager`) tracks transition across t
 
 ## Coordinator Communication
 Communication relies on a persistent STOMP WebSocket connection to the Coordinator.
-- **Connection Establishment**: Uses `api-key` in Basic Auth headers.
-- **Enrollment/Registration**: Validates credentials and sends a `REGISTER` message.
+- **Connection Establishment**: Connects using a generated Enrollment Link URL containing the Coordinator address and registration token.
+- **Enrollment/Registration**: Connects and enrolls to Coordinator, receiving a runtime credential to finalize the registration, and sends a `REGISTER` message.
 - **Heartbeat & Resource Updates**: Periodically broadcasts liveness and OSHI hardware metrics.
 - **Reconnect Behavior**: Implements exponential backoff via `WebSocketConnectionManager` when disconnected.
 
@@ -53,8 +53,6 @@ The Worker Agent embeds its own local dashboard:
 
 ## Configuration
 Important configurable properties in `application.yml`:
-- `worker.coordinator.url`: Base URL of the Coordinator.
-- `worker.coordinator.api-key`: Required secret to connect to the STOMP endpoint.
 - `cluster.worker.id`: Static ID of this node.
 
 ## Key Packages

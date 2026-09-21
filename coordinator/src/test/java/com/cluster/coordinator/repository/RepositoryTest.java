@@ -21,6 +21,9 @@ public class RepositoryTest {
 
     @Test
     public void testJobToTaskRelationshipAndQueries() {
+        taskRepository.deleteAll();
+        jobRepository.deleteAll();
+        
         // Create Job
         Job job = new Job();
         job.setId("job-100");

@@ -59,6 +59,14 @@ public class JobController {
         return ResponseEntity.status(HttpStatus.CREATED).body(mapToJobResponse(job));
     }
 
+    @GetMapping
+    public ResponseEntity<List<JobResponse>> getAllJobs() {
+        List<JobResponse> jobs = jobService.getAllJobs().stream()
+                .map(this::mapToJobResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(jobs);
+    }
+
     /**
      * Retrieves the current execution status and metadata of a specific job.
      * 
@@ -92,6 +100,14 @@ public class JobController {
                         .map(this::mapToTaskResponse)
                         .collect(Collectors.toList());
 
+        return ResponseEntity.ok(tasks);
+    }
+
+    @GetMapping("/tasks")
+    public ResponseEntity<List<TaskResponse>> getAllTasks() {
+        List<TaskResponse> tasks = jobService.getAllTasks().stream()
+                .map(this::mapToTaskResponse)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(tasks);
     }
 

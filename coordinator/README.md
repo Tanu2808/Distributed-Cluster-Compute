@@ -19,7 +19,7 @@ The Coordinator acts as the central control plane (Master) of the Distributed Co
 ## Architecture
 The Coordinator is the central hub:
 - It communicates downstream with **Worker Agents** over a persistent WebSocket (STOMP) connection using standardized messages from the **Shared** module.
-- It communicates upstream with the **Coordinator Frontend** via REST APIs and a dedicated WebSocket channel for live event streaming.
+- It communicates upstream with the **Coordinator UI** via REST APIs and a dedicated WebSocket channel for live event streaming. The UI is embedded directly into the Coordinator and served automatically.
 
 ## Job Execution Flow
 1. A client submits a Job payload via the REST API (`JobController`).
@@ -34,6 +34,7 @@ Key endpoints provided by the Coordinator:
 - `GET /api/workers` - Lists registered workers.
 - `GET /api/workers/{id}` - Details for a specific worker.
 - `GET /api/cluster/resources` - Aggregates CPU/RAM across the cluster.
+- `GET /api/cluster/enrollment-link` - Returns the URL that new workers can use to auto-enroll.
 - `POST /api/cluster/join-code/rotate` - Rotates join codes for new worker enrollment.
 - `POST /api/jobs` - Submits a new job.
 - `GET /api/jobs/{id}` - Checks job status.

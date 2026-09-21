@@ -12,20 +12,10 @@ export interface ClusterConfigurationResponse {
 }
 
 export const clusterApi = {
-  joinCluster: async (joinCode: string): Promise<ClusterEnrollmentResponse> => {
-    return await fetchApi<ClusterEnrollmentResponse>("/cluster/join", {
+  connectToCoordinator: async (coordinatorUrl: string): Promise<ClusterEnrollmentResponse> => {
+    return await fetchApi<ClusterEnrollmentResponse>("/cluster/connect", {
       method: "POST",
-      body: JSON.stringify({ joinCode }),
-    });
-  },
-
-  createCluster: async (
-    clusterName: string,
-    isLocal: boolean,
-  ): Promise<ClusterConfigurationResponse> => {
-    return await fetchApi<ClusterConfigurationResponse>("/cluster/create", {
-      method: "POST",
-      body: JSON.stringify({ clusterName, isLocal }),
+      body: JSON.stringify({ coordinatorUrl }),
     });
   },
 };

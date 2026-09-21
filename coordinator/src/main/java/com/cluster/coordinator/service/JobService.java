@@ -129,6 +129,14 @@ public class JobService {
         return jobRepository.findById(jobId);
     }
 
+    public List<Job> getAllJobs() {
+        return jobRepository.findAll();
+    }
+
+    public List<Task> getAllTasks() {
+        return taskRepository.findAll();
+    }
+
     public List<Task> getTasksForJob(String jobId) {
         return taskRepository.findByJobId(jobId);
     }

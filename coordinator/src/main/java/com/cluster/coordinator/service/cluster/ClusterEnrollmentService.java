@@ -19,18 +19,15 @@ public class ClusterEnrollmentService {
 
     private final ClusterSettingsRepository settingsRepository;
     private final com.cluster.coordinator.repository.WorkerRepository workerRepository;
-
-    @Value("${server.port:8080}")
-    private String serverPort;
-
-    @Value("${cluster.coordinator.advertised-url:http://localhost:${server.port:8080}}")
-    private String advertisedUrl;
+    private final CoordinatorEndpointProvider endpointProvider;
 
     public ClusterEnrollmentService(
             ClusterSettingsRepository settingsRepository,
-            com.cluster.coordinator.repository.WorkerRepository workerRepository) {
+            com.cluster.coordinator.repository.WorkerRepository workerRepository,
+            CoordinatorEndpointProvider endpointProvider) {
         this.settingsRepository = settingsRepository;
         this.workerRepository = workerRepository;
+        this.endpointProvider = endpointProvider;
     }
 
     /** Gets the current join code. If one does not exist, it generates and persists a new one. */
@@ -55,6 +52,12 @@ public class ClusterEnrollmentService {
         settingsRepository.save(new ClusterSettings(JOIN_CODE_KEY, newCode));
         log.info("Cluster join code rotated.");
         return newCode;
+    }
+
+    /** Returns the full enrollment URL for a worker to connect automatically. */
+    @Transactional
+    public String getEnrollmentLink() {
+        return resolveCoordinatorUrl() + "?token=" + getJoinCode();
     }
 
     /**
@@ -122,22 +125,10 @@ public class ClusterEnrollmentService {
     }
 
     /**
-     * Resolves the Coordinator URL advertised to workers during enrollment. Uses configured
-     * advertised-url, falling back to http://localhost:{server.port}, and strips any trailing slash
-     * to ensure clean URL concatenation.
+     * Resolves the Coordinator URL advertised to workers during enrollment.
      */
     private String resolveCoordinatorUrl() {
-        String url =
-                (advertisedUrl != null && !advertisedUrl.isBlank())
-                        ? advertisedUrl.trim()
-                        : "http://localhost:"
-                                + (serverPort != null && !serverPort.isBlank()
-                                        ? serverPort
-                                        : "8080");
-        if (url.endsWith("/")) {
-            url = url.substring(0, url.length() - 1);
-        }
-        return url;
+        return endpointProvider.getBaseUrl();
     }
 
     /**
